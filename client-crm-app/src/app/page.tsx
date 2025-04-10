@@ -1,33 +1,49 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Users, Mail, Calendar } from "lucide-react";
-import { useClientStore } from "@/lib/store";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientList } from "@/components/client-list";
+import { UserPlus, Users, Calendar, BarChart, MessageSquarePlus } from "lucide-react";
+import { useClientStore } from "@/lib/store";
+import { InteractionModal } from "@/components/interaction-modal";
 
 export default function Home() {
-  const { clients, fetchRecentClients, isLoading } = useClientStore();
-  
+  const { fetchRecentClients, clients, isLoading, error } = useClientStore();
+  const [interactionModalOpen, setInteractionModalOpen] = useState(false);
+
   useEffect(() => {
     fetchRecentClients(5);
   }, [fetchRecentClients]);
 
-  // Count active clients
-  const activeClients = clients.filter(client => client.status === 'active').length;
-  
+  const stats = {
+    total: clients.length,
+    active: clients.filter(client => client.status === 'active').length,
+    new: clients.filter(client => {
+      const createdAt = new Date(client.createdAt);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return createdAt >= thirtyDaysAgo;
+    }).length,
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <Button asChild>
-          <Link href="/clients/new">
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add Client
-          </Link>
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={() => setInteractionModalOpen(true)}>
+            <MessageSquarePlus className="mr-2 h-4 w-4" />
+            Add Interaction
+          </Button>
+          <Button asChild>
+            <Link href="/clients/new">
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Client
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -37,10 +53,7 @@ export default function Home() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{clients.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Manage your client relationships
-            </p>
+            <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
         <Card>
@@ -49,34 +62,26 @@ export default function Home() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeClients}</div>
-            <p className="text-xs text-muted-foreground">
-              Currently active clients
-            </p>
+            <div className="text-2xl font-bold">{stats.active}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Interactions</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              In the last 30 days
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Follow-ups</CardTitle>
+            <CardTitle className="text-sm font-medium">New Clients (30d)</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              Scheduled for next 7 days
-            </p>
+            <div className="text-2xl font-bold">{stats.new}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Interactions</CardTitle>
+            <BarChart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">--</div>
+            <p className="text-xs text-muted-foreground">Coming soon</p>
           </CardContent>
         </Card>
       </div>
@@ -84,17 +89,17 @@ export default function Home() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold">Recent Clients</h3>
-          <Button variant="outline" asChild>
+          <Button variant="outline" size="sm" asChild>
             <Link href="/clients">View All</Link>
           </Button>
         </div>
-
-        {isLoading ? (
-          <div className="text-center p-4">Loading clients...</div>
-        ) : (
-          <ClientList limit={5} />
-        )}
+        <ClientList limit={5} />
       </div>
+
+      <InteractionModal 
+        isOpen={interactionModalOpen} 
+        onClose={() => setInteractionModalOpen(false)} 
+      />
     </div>
   );
 }

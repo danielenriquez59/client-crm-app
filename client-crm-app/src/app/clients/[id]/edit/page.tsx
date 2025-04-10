@@ -26,12 +26,6 @@ export default function EditClientPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <Button variant="outline" size="sm" asChild className="mb-6">
-          <Link href="/clients">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Clients
-          </Link>
-        </Button>
         <div className="p-4 text-center text-destructive">
           {error}
         </div>
@@ -42,12 +36,6 @@ export default function EditClientPage() {
   if (!selectedClient) {
     return (
       <div className="space-y-6">
-        <Button variant="outline" size="sm" asChild className="mb-6">
-          <Link href="/clients">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Clients
-          </Link>
-        </Button>
         <div className="p-4 text-center">
           Client not found.
         </div>
@@ -57,12 +45,6 @@ export default function EditClientPage() {
 
   return (
     <div className="space-y-6">
-      <Button variant="outline" size="sm" asChild className="mb-6">
-        <Link href={`/clients/${selectedClient.id}`}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Client
-        </Link>
-      </Button>
 
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Edit Client</h2>

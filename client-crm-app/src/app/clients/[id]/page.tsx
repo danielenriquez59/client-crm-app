@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Edit, Trash2, Mail, Phone, Building, MapPin, Clock } from "lucide-react";
+import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { useClientStore } from "@/lib/store";
 import { formatDate } from "@/lib/utils";
+import { InteractionList } from "@/components/interaction-list";
 
 export default function ClientDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { selectedClient, fetchClientById, removeClient, isLoading, error } = useClientStore();
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -24,15 +24,9 @@ export default function ClientDetailPage() {
   const handleDelete = async () => {
     if (!selectedClient?.id) return;
     
-    if (window.confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
-      setIsDeleting(true);
-      try {
-        await removeClient(selectedClient.id);
-        router.push('/clients');
-      } catch (error) {
-        console.error('Failed to delete client:', error);
-        setIsDeleting(false);
-      }
+    if (window.confirm("Are you sure you want to delete this client? This action cannot be undone.")) {
+      await removeClient(selectedClient.id);
+      router.push("/clients");
     }
   };
 
@@ -43,12 +37,6 @@ export default function ClientDetailPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <Button variant="outline" size="sm" asChild className="mb-6">
-          <Link href="/clients">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Clients
-          </Link>
-        </Button>
         <div className="p-4 text-center text-destructive">
           {error}
         </div>
@@ -59,12 +47,6 @@ export default function ClientDetailPage() {
   if (!selectedClient) {
     return (
       <div className="space-y-6">
-        <Button variant="outline" size="sm" asChild className="mb-6">
-          <Link href="/clients">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Clients
-          </Link>
-        </Button>
         <div className="p-4 text-center">
           Client not found.
         </div>
@@ -74,108 +56,87 @@ export default function ClientDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/clients">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Clients
-          </Link>
-        </Button>
+      <div className="flex justify-between items-center">
         <div className="flex space-x-2">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/clients/${selectedClient.id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
-              Edit
+              Edit Client
             </Link>
           </Button>
           <Button 
-            variant="destructive" 
-            size="sm" 
+            variant="outline" 
+            size="sm"
             onClick={handleDelete}
-            disabled={isDeleting}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            Delete
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">{selectedClient.name}</h2>
-        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-          selectedClient.status === 'active' 
-            ? 'bg-green-100 text-green-800' 
-            : selectedClient.status === 'inactive'
-            ? 'bg-gray-100 text-gray-800'
-            : 'bg-blue-100 text-blue-800'
-        }`}>
-          {selectedClient.status.charAt(0).toUpperCase() + selectedClient.status.slice(1)}
-        </span>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
+            <CardTitle>Client Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center">
-              <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>{selectedClient.email}</span>
-            </div>
-            {selectedClient.phone && (
-              <div className="flex items-center">
-                <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{selectedClient.phone}</span>
+          <CardContent>
+            <dl className="space-y-4">
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Name</dt>
+                <dd className="text-base">{selectedClient.name}</dd>
               </div>
-            )}
-            {selectedClient.company && (
-              <div className="flex items-center">
-                <Building className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{selectedClient.company}</span>
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Email</dt>
+                <dd className="text-base">{selectedClient.email}</dd>
               </div>
-            )}
-            {selectedClient.location && (
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{selectedClient.location}</span>
+              {selectedClient.phone && (
+                <div>
+                  <dt className="text-sm font-medium text-muted-foreground">Phone</dt>
+                  <dd className="text-base">{selectedClient.phone}</dd>
+                </div>
+              )}
+              {selectedClient.company && (
+                <div>
+                  <dt className="text-sm font-medium text-muted-foreground">Company</dt>
+                  <dd className="text-base">{selectedClient.company}</dd>
+                </div>
+              )}
+              {selectedClient.location && (
+                <div>
+                  <dt className="text-sm font-medium text-muted-foreground">Location</dt>
+                  <dd className="text-base">{selectedClient.location}</dd>
+                </div>
+              )}
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Status</dt>
+                <dd>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    selectedClient.status === 'active' 
+                      ? 'bg-green-100 text-green-800' 
+                      : selectedClient.status === 'inactive'
+                      ? 'bg-gray-100 text-gray-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {selectedClient.status.charAt(0).toUpperCase() + selectedClient.status.slice(1)}
+                  </span>
+                </dd>
               </div>
-            )}
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Added</dt>
+                <dd className="text-base">{formatDate(selectedClient.createdAt)}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Last Updated</dt>
+                <dd className="text-base">{formatDate(selectedClient.updatedAt)}</dd>
+              </div>
+            </dl>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Client History</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>Created: {formatDate(selectedClient.createdAt)}</span>
-            </div>
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>Last Updated: {formatDate(selectedClient.updatedAt)}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold">Recent Interactions</h3>
-        <div className="rounded-md border">
-          <div className="p-4 text-center text-muted-foreground">
-            No interactions found. Add your first interaction to get started.
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold">Notes</h3>
-        <div className="rounded-md border">
-          <div className="p-4 text-center text-muted-foreground">
-            No notes found. Add your first note to get started.
-          </div>
+        <div className="space-y-6">
+          {/* Client Interactions Section */}
+          {selectedClient.id && <InteractionList clientId={selectedClient.id} />}
         </div>
       </div>
     </div>

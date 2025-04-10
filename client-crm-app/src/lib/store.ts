@@ -1,5 +1,18 @@
 import { create } from 'zustand';
-import { Client, Interaction, Note, addClient, getAllClients, getClientById, updateClient, deleteClient, getRecentClients } from './db';
+import { 
+  Client, 
+  Interaction, 
+  Note, 
+  addClient, 
+  getAllClients, 
+  getClientById, 
+  updateClient, 
+  deleteClient, 
+  getRecentClients,
+  getClientInteractions,
+  getAllInteractions,
+  addInteraction 
+} from './db';
 
 interface ClientStore {
   // Client state
@@ -8,7 +21,12 @@ interface ClientStore {
   isLoading: boolean;
   error: string | null;
   
-  // Actions
+  // Interaction state
+  interactions: Interaction[];
+  isLoadingInteractions: boolean;
+  interactionError: string | null;
+  
+  // Actions - Clients
   fetchClients: () => Promise<void>;
   fetchRecentClients: (limit?: number) => Promise<void>;
   fetchClientById: (id: number) => Promise<void>;
@@ -16,17 +34,29 @@ interface ClientStore {
   updateClientData: (id: number, client: Partial<Omit<Client, 'id' | 'createdAt'>>) => Promise<void>;
   removeClient: (id: number) => Promise<void>;
   setSelectedClient: (client: Client | null) => void;
+  
+  // Actions - Interactions
+  fetchClientInteractions: (clientId: number) => Promise<void>;
+  fetchAllInteractions: () => Promise<void>;
+  createInteraction: (interaction: Omit<Interaction, 'id' | 'createdAt'>) => Promise<number>;
+  
+  // Error handling
   clearError: () => void;
 }
 
 export const useClientStore = create<ClientStore>((set, get) => ({
-  // Initial state
+  // Initial state - Clients
   clients: [],
   selectedClient: null,
   isLoading: false,
   error: null,
   
-  // Actions
+  // Initial state - Interactions
+  interactions: [],
+  isLoadingInteractions: false,
+  interactionError: null,
+  
+  // Actions - Clients
   fetchClients: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -110,7 +140,42 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     set({ selectedClient: client });
   },
   
+  // Actions - Interactions
+  fetchClientInteractions: async (clientId: number) => {
+    set({ isLoadingInteractions: true, interactionError: null });
+    try {
+      const interactions = await getClientInteractions(clientId);
+      set({ interactions, isLoadingInteractions: false });
+    } catch (error) {
+      set({ interactionError: (error as Error).message, isLoadingInteractions: false });
+    }
+  },
+  
+  fetchAllInteractions: async () => {
+    set({ isLoadingInteractions: true, interactionError: null });
+    try {
+      const interactions = await getAllInteractions();
+      set({ interactions, isLoadingInteractions: false });
+    } catch (error) {
+      set({ interactionError: (error as Error).message, isLoadingInteractions: false });
+    }
+  },
+  
+  createInteraction: async (interaction) => {
+    set({ isLoadingInteractions: true, interactionError: null });
+    try {
+      const id = await addInteraction(interaction);
+      // Refresh interactions after adding
+      await get().fetchClientInteractions(interaction.clientId);
+      set({ isLoadingInteractions: false });
+      return id;
+    } catch (error) {
+      set({ interactionError: (error as Error).message, isLoadingInteractions: false });
+      throw error;
+    }
+  },
+  
   clearError: () => {
-    set({ error: null });
+    set({ error: null, interactionError: null });
   }
 }));
