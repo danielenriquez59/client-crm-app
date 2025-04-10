@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Client } from '@/lib/db';
 import { useClientStore } from '@/lib/store';
+import { CompanyAutocomplete } from './company-autocomplete';
 
 interface ClientFormProps {
   client?: Client;
@@ -32,6 +33,10 @@ export function ClientForm({ client, isEditing = false }: ClientFormProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCompanyChange = (value: string) => {
+    setFormData(prev => ({ ...prev, company: value }));
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -121,12 +126,10 @@ export function ClientForm({ client, isEditing = false }: ClientFormProps) {
               <label htmlFor="company" className="text-sm font-medium">
                 Company
               </label>
-              <Input 
-                id="company" 
-                name="company"
+              <CompanyAutocomplete
                 value={formData.company}
-                onChange={handleChange}
-                placeholder="Company name" 
+                onChange={handleCompanyChange}
+                placeholder="Company name"
               />
             </div>
             <div className="space-y-2">

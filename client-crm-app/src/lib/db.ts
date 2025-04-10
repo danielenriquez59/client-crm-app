@@ -93,6 +93,18 @@ export async function getClientById(id: number): Promise<Client | undefined> {
   return client ? convertDates(client) : undefined;
 }
 
+export async function getUniqueCompanies(): Promise<string[]> {
+  const clients = await db.clients.toArray();
+  const companies = clients
+    .map(client => client.company)
+    .filter((company): company is string => 
+      company !== undefined && company !== null && company.trim() !== ''
+    );
+  
+  // Return unique companies sorted alphabetically
+  return [...new Set(companies)].sort();
+}
+
 export async function addClient(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>): Promise<number> {
   const now = new Date();
   const id = await db.clients.add({

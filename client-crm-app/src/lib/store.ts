@@ -11,7 +11,8 @@ import {
   getRecentClients,
   getClientInteractions,
   getAllInteractions,
-  addInteraction 
+  addInteraction,
+  getUniqueCompanies
 } from './db';
 
 interface ClientStore {
@@ -25,6 +26,10 @@ interface ClientStore {
   interactions: Interaction[];
   isLoadingInteractions: boolean;
   interactionError: string | null;
+
+  // Companies state
+  companies: string[];
+  isLoadingCompanies: boolean;
   
   // Actions - Clients
   fetchClients: () => Promise<void>;
@@ -39,6 +44,9 @@ interface ClientStore {
   fetchClientInteractions: (clientId: number) => Promise<void>;
   fetchAllInteractions: () => Promise<void>;
   createInteraction: (interaction: Omit<Interaction, 'id' | 'createdAt'>) => Promise<number>;
+  
+  // Actions - Companies
+  fetchCompanies: () => Promise<void>;
   
   // Error handling
   clearError: () => void;
@@ -55,6 +63,10 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   interactions: [],
   isLoadingInteractions: false,
   interactionError: null,
+  
+  // Initial state - Companies
+  companies: [],
+  isLoadingCompanies: false,
   
   // Actions - Clients
   fetchClients: async () => {
@@ -97,6 +109,10 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       const id = await addClient(client);
       // Refresh client list after adding
       await get().fetchClients();
+      // Refresh companies list if a new company was added
+      if (client.company) {
+        await get().fetchCompanies();
+      }
       set({ isLoading: false });
       return id;
     } catch (error) {
@@ -114,6 +130,10 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       if (get().selectedClient?.id === id) {
         await get().fetchClientById(id);
       }
+      // Refresh companies list if company was updated
+      if (client.company) {
+        await get().fetchCompanies();
+      }
       set({ isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
@@ -130,6 +150,8 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       if (get().selectedClient?.id === id) {
         set({ selectedClient: null });
       }
+      // Refresh companies list as a company might have been removed
+      await get().fetchCompanies();
       set({ isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
@@ -172,6 +194,17 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     } catch (error) {
       set({ interactionError: (error as Error).message, isLoadingInteractions: false });
       throw error;
+    }
+  },
+  
+  // Actions - Companies
+  fetchCompanies: async () => {
+    set({ isLoadingCompanies: true });
+    try {
+      const companies = await getUniqueCompanies();
+      set({ companies, isLoadingCompanies: false });
+    } catch (error) {
+      set({ error: (error as Error).message, isLoadingCompanies: false });
     }
   },
   

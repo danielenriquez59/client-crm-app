@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from './ui/button';
 import { 
   Dialog, 
   DialogContent, 
@@ -9,28 +9,18 @@ import {
   DialogFooter, 
   DialogHeader, 
   DialogTitle 
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from './ui/dialog';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 import { 
   Select, 
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
   SelectValue 
-} from '@/components/ui/select';
-import { 
-  Command, 
-  CommandEmpty, 
-  CommandGroup, 
-  CommandInput, 
-  CommandItem, 
-  CommandList 
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+} from './ui/select';
+import { ClientAutocomplete } from './client-autocomplete';
 import { useClientStore } from '@/lib/store';
 import { Client } from '@/lib/db';
 
@@ -43,7 +33,6 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
   const { clients, fetchClients, createInteraction } = useClientStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   
   const [formData, setFormData] = useState({
@@ -65,12 +54,11 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleClientSelect = (clientId: number) => {
+  const handleClientSelect = (clientId: number | null) => {
     setSelectedClientId(clientId);
-    setOpen(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!selectedClientId) {
@@ -104,10 +92,8 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
     }
   };
 
-  const selectedClient = clients.find(client => client.id === selectedClientId);
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !isSubmitting && !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(openState: boolean) => !isSubmitting && !openState && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Interaction</DialogTitle>
@@ -119,47 +105,12 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="client">Client</Label>
-            <Popover open={open} onOpenChange={setOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={open}
-                  className="w-full justify-between"
-                >
-                  {selectedClient ? selectedClient.name : "Select client..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[400px] p-0">
-                <Command>
-                  <CommandInput placeholder="Search client..." />
-                  <CommandEmpty>No client found.</CommandEmpty>
-                  <CommandGroup>
-                    <CommandList>
-                      {clients.map((client) => (
-                        <CommandItem
-                          key={client.id}
-                          value={client.name}
-                          onSelect={() => handleClientSelect(client.id as number)}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedClientId === client.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {client.name}
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            {client.company ? `(${client.company})` : ''}
-                          </span>
-                        </CommandItem>
-                      ))}
-                    </CommandList>
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <ClientAutocomplete
+              value={selectedClientId}
+              onChange={handleClientSelect}
+              placeholder="Search for a client..."
+              required
+            />
           </div>
           
           <div className="space-y-2">
