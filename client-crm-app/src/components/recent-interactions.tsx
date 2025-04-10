@@ -9,10 +9,11 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from '@/components/ui/table';
+} from './ui/table';
 import { formatDate } from '@/lib/utils';
 import { useClientStore } from '@/lib/store';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from './ui/skeleton';
+import { Badge } from './ui/badge';
 
 interface RecentInteractionsProps {
   limit?: number;
@@ -68,7 +69,7 @@ export function RecentInteractions({ limit = 10 }: RecentInteractionsProps) {
         <TableHeader>
           <TableRow>
             <TableHead>Date</TableHead>
-            <TableHead>Client</TableHead>
+            <TableHead>Clients</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Notes</TableHead>
           </TableRow>
@@ -80,12 +81,23 @@ export function RecentInteractions({ limit = 10 }: RecentInteractionsProps) {
                 {formatDate(interaction.date)}
               </TableCell>
               <TableCell>
-                <Link 
-                  href={`/clients/${interaction.clientId}`}
-                  className="text-blue-600 hover:underline"
-                >
-                  {getClientName(interaction.clientId)}
-                </Link>
+                <div className="flex flex-wrap gap-1">
+                  {interaction.clientIds && interaction.clientIds.length > 0 ? (
+                    interaction.clientIds.map((clientId) => (
+                      <Link 
+                        href={`/clients/${clientId}`}
+                        key={clientId}
+                        className="inline-block"
+                      >
+                        <Badge variant="secondary" className="hover:bg-secondary">
+                          {getClientName(clientId)}
+                        </Badge>
+                      </Link>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground">No clients</span>
+                  )}
+                </div>
               </TableCell>
               <TableCell>{formatInteractionType(interaction.type)}</TableCell>
               <TableCell className="max-w-xs truncate">

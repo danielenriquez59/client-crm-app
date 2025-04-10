@@ -15,7 +15,7 @@ export interface Client {
 
 export interface Interaction {
   id?: number;
-  clientId: number;
+  clientIds: number[]; 
   type: 'email' | 'call' | 'meeting' | 'other';
   date: Date;
   notes: string;
@@ -44,6 +44,21 @@ class ClientCRMDatabase extends Dexie {
       clients: '++id, name, email, company, status, updatedAt',
       interactions: '++id, clientId, type, date',
       notes: '++id, clientId, createdAt'
+    });
+
+    // Add version 2 with schema migration
+    this.version(2).stores({
+      interactions: '++id, *clientIds, type, date'
+    }).upgrade(tx => {
+      // Migrate existing interactions to the new schema
+      return tx.table('interactions').toCollection().modify(interaction => {
+        // Convert single clientId to array of clientIds
+        if (interaction.clientId !== undefined && !interaction.clientIds) {
+          interaction.clientIds = [interaction.clientId];
+          // Remove the old clientId property
+          delete interaction.clientId;
+        }
+      });
     });
   }
 }
@@ -123,17 +138,42 @@ export async function updateClient(id: number, client: Partial<Omit<Client, 'id'
 }
 
 export async function deleteClient(id: number): Promise<void> {
-  // Delete client and all related interactions and notes
+  // Delete client and all related notes
+  // For interactions, remove this client from clientIds array
   await db.transaction('rw', [db.clients, db.interactions, db.notes], async () => {
+    // Delete notes for this client
     await db.notes.where('clientId').equals(id).delete();
-    await db.interactions.where('clientId').equals(id).delete();
+    
+    // Update interactions to remove this client
+    const clientInteractions = await db.interactions
+      .where('clientIds')
+      .equals(id)
+      .toArray();
+    
+    // For each interaction that includes this client
+    for (const interaction of clientInteractions) {
+      const updatedClientIds = interaction.clientIds.filter(cId => cId !== id);
+      
+      if (updatedClientIds.length === 0) {
+        // If this was the only client, delete the interaction
+        await db.interactions.delete(interaction.id!);
+      } else {
+        // Otherwise, update the interaction with the filtered client IDs
+        await db.interactions.update(interaction.id!, {
+          clientIds: updatedClientIds
+        });
+      }
+    }
+    
+    // Finally, delete the client
     await db.clients.delete(id);
   });
 }
 
 export async function getClientInteractions(clientId: number): Promise<Interaction[]> {
+  // Get interactions where the clientId is in the clientIds array
   const interactions = await db.interactions
-    .where('clientId')
+    .where('clientIds')
     .equals(clientId)
     .reverse()
     .sortBy('date');

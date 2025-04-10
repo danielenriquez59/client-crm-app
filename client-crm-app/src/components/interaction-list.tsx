@@ -4,54 +4,64 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
-import { Interaction } from '@/lib/db';
+import { Interaction, Client } from '@/lib/db';
 import { useClientStore } from '@/lib/store';
 import { PlusCircle } from 'lucide-react';
-import { InteractionForm } from './interaction-form';
+import { InteractionModal } from './interaction-modal';
+import { Badge } from './ui/badge';
+import Link from 'next/link';
 
 interface InteractionListProps {
   clientId: number;
 }
 
 export function InteractionList({ clientId }: InteractionListProps) {
-  const { interactions, fetchClientInteractions, isLoadingInteractions, interactionError } = useClientStore();
-  const [showAddForm, setShowAddForm] = useState(false);
+  const { 
+    interactions, 
+    fetchClientInteractions, 
+    clients,
+    fetchClients,
+    isLoadingInteractions, 
+    interactionError 
+  } = useClientStore();
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     if (clientId) {
       fetchClientInteractions(clientId);
+      fetchClients();
     }
-  }, [clientId, fetchClientInteractions]);
+  }, [clientId, fetchClientInteractions, fetchClients]);
 
-  const handleAddSuccess = () => {
-    setShowAddForm(false);
+  const handleCloseModal = () => {
+    setShowAddModal(false);
     fetchClientInteractions(clientId);
+  };
+
+  // Get client name by ID
+  const getClientName = (clientId: number): Client | undefined => {
+    return clients.find(c => c.id === clientId);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-xl font-semibold">Interactions</h3>
-        {!showAddForm && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setShowAddForm(true)}
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Interaction
-          </Button>
-        )}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setShowAddModal(true)}
+        >
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Interaction
+        </Button>
       </div>
 
-      {showAddForm && (
-        <div className="mb-6">
-          <InteractionForm 
-            clientId={clientId} 
-            onSuccess={handleAddSuccess}
-            onCancel={() => setShowAddForm(false)}
-          />
-        </div>
+      {showAddModal && (
+        <InteractionModal 
+          isOpen={showAddModal} 
+          onClose={handleCloseModal}
+        />
       )}
 
       {isLoadingInteractions ? (
@@ -75,7 +85,12 @@ export function InteractionList({ clientId }: InteractionListProps) {
       ) : (
         <div className="space-y-4">
           {interactions.map((interaction) => (
-            <InteractionCard key={interaction.id} interaction={interaction} />
+            <InteractionCard 
+              key={interaction.id} 
+              interaction={interaction} 
+              getClientName={getClientName}
+              currentClientId={clientId}
+            />
           ))}
         </div>
       )}
@@ -83,7 +98,13 @@ export function InteractionList({ clientId }: InteractionListProps) {
   );
 }
 
-function InteractionCard({ interaction }: { interaction: Interaction }) {
+interface InteractionCardProps {
+  interaction: Interaction;
+  getClientName: (id: number) => Client | undefined;
+  currentClientId: number;
+}
+
+function InteractionCard({ interaction, getClientName, currentClientId }: InteractionCardProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -99,6 +120,22 @@ function InteractionCard({ interaction }: { interaction: Interaction }) {
         </div>
       </CardHeader>
       <CardContent>
+        {interaction.clientIds && interaction.clientIds.length > 1 && (
+          <div className="mb-2 flex flex-wrap gap-1">
+            {interaction.clientIds
+              .filter(cId => cId !== currentClientId) // Don't show badge for current client
+              .map(clientId => {
+                const client = getClientName(clientId);
+                return client ? (
+                  <Link href={`/clients/${client.id}`} key={client.id}>
+                    <Badge variant="secondary" className="hover:bg-secondary">
+                      {client.name}
+                    </Badge>
+                  </Link>
+                ) : null;
+              })}
+          </div>
+        )}
         <p className="text-sm whitespace-pre-wrap">{interaction.notes}</p>
       </CardContent>
     </Card>

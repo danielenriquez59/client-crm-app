@@ -150,6 +150,8 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       if (get().selectedClient?.id === id) {
         set({ selectedClient: null });
       }
+      // Refresh interactions as they might have been updated
+      await get().fetchAllInteractions();
       // Refresh companies list as a company might have been removed
       await get().fetchCompanies();
       set({ isLoading: false });
@@ -188,7 +190,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     try {
       const id = await addInteraction(interaction);
       // Refresh interactions after adding
-      await get().fetchClientInteractions(interaction.clientId);
+      await get().fetchAllInteractions(); 
       set({ isLoadingInteractions: false });
       return id;
     } catch (error) {

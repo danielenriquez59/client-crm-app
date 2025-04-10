@@ -20,7 +20,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from './ui/select';
-import { ClientAutocomplete } from './client-autocomplete';
+import { ClientMultiSelect } from './client-multi-select';
 import { useClientStore } from '@/lib/store';
 import { Client } from '@/lib/db';
 
@@ -33,7 +33,7 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
   const { clients, fetchClients, createInteraction } = useClientStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
   
   const [formData, setFormData] = useState({
     type: 'call',
@@ -54,15 +54,15 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleClientSelect = (clientId: number | null) => {
-    setSelectedClientId(clientId);
+  const handleClientsSelect = (clientIds: number[]) => {
+    setSelectedClientIds(clientIds);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!selectedClientId) {
-      setError('Please select a client');
+    if (selectedClientIds.length === 0) {
+      setError('Please select at least one client');
       return;
     }
     
@@ -71,7 +71,7 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
     
     try {
       await createInteraction({
-        clientId: selectedClientId,
+        clientIds: selectedClientIds,
         type: formData.type as 'email' | 'call' | 'meeting' | 'other',
         date: new Date(formData.date),
         notes: formData.notes,
@@ -83,7 +83,7 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
         date: new Date().toISOString().split('T')[0],
         notes: '',
       });
-      setSelectedClientId(null);
+      setSelectedClientIds([]);
       onClose();
     } catch (err) {
       setError((err as Error).message || 'Failed to create interaction');
@@ -98,19 +98,22 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
         <DialogHeader>
           <DialogTitle>Add New Interaction</DialogTitle>
           <DialogDescription>
-            Record a new interaction with a client.
+            Record a new interaction with one or more clients.
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="client">Client</Label>
-            <ClientAutocomplete
-              value={selectedClientId}
-              onChange={handleClientSelect}
-              placeholder="Search for a client..."
+            <Label htmlFor="client">Clients</Label>
+            <ClientMultiSelect
+              value={selectedClientIds}
+              onChange={handleClientsSelect}
+              placeholder="Search for clients..."
               required
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              You can select multiple clients for group interactions
+            </p>
           </div>
           
           <div className="space-y-2">
