@@ -5,17 +5,19 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientList } from "@/components/client-list";
+import { RecentInteractions } from "@/components/recent-interactions";
 import { UserPlus, Users, Calendar, BarChart, MessageSquarePlus } from "lucide-react";
 import { useClientStore } from "@/lib/store";
 import { InteractionModal } from "@/components/interaction-modal";
 
 export default function Home() {
-  const { fetchRecentClients, clients, isLoading, error } = useClientStore();
+  const { fetchRecentClients, clients, isLoading, error, fetchAllInteractions, interactions } = useClientStore();
   const [interactionModalOpen, setInteractionModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchRecentClients(5);
-  }, [fetchRecentClients]);
+    fetchRecentClients(10);
+    fetchAllInteractions();
+  }, [fetchRecentClients, fetchAllInteractions]);
 
   const stats = {
     total: clients.length,
@@ -26,6 +28,7 @@ export default function Home() {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       return createdAt >= thirtyDaysAgo;
     }).length,
+    interactions: interactions.length,
   };
 
   return (
@@ -80,10 +83,19 @@ export default function Home() {
             <BarChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">--</div>
-            <p className="text-xs text-muted-foreground">Coming soon</p>
+            <div className="text-2xl font-bold">{stats.interactions}</div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold">Recent Interactions</h3>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/interactions">View All</Link>
+          </Button>
+        </div>
+        <RecentInteractions limit={10} />
       </div>
 
       <div className="space-y-4">
@@ -93,7 +105,7 @@ export default function Home() {
             <Link href="/clients">View All</Link>
           </Button>
         </div>
-        <ClientList limit={5} />
+        <ClientList limit={10} />
       </div>
 
       <InteractionModal 
