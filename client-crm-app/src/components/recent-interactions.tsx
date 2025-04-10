@@ -14,13 +14,21 @@ import { formatDate } from '@/lib/utils';
 import { useClientStore } from '@/lib/store';
 import { Skeleton } from './ui/skeleton';
 import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Eye, Edit, Trash2 } from 'lucide-react';
 
 interface RecentInteractionsProps {
   limit?: number;
 }
 
 export function RecentInteractions({ limit = 10 }: RecentInteractionsProps) {
-  const { interactions, fetchAllInteractions, isLoadingInteractions, clients, fetchClients } = useClientStore();
+  const { 
+    interactions, 
+    fetchAllInteractions, 
+    isLoadingInteractions, 
+    clients, 
+    fetchClients 
+  } = useClientStore();
   
   useEffect(() => {
     fetchAllInteractions();
@@ -41,6 +49,16 @@ export function RecentInteractions({ limit = 10 }: RecentInteractionsProps) {
   // Get interaction type with proper capitalization
   const formatInteractionType = (type: string) => {
     return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
+  // Handle delete interaction (placeholder for now)
+  const handleDelete = (id: number) => {
+    if (window.confirm('Are you sure you want to delete this interaction? This action cannot be undone.')) {
+      // TODO: Implement delete interaction functionality
+      console.log('Delete interaction', id);
+      // After implementing, refresh the interactions list
+      fetchAllInteractions();
+    }
   };
 
   if (isLoadingInteractions) {
@@ -72,6 +90,7 @@ export function RecentInteractions({ limit = 10 }: RecentInteractionsProps) {
             <TableHead>Clients</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Notes</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -102,6 +121,30 @@ export function RecentInteractions({ limit = 10 }: RecentInteractionsProps) {
               <TableCell>{formatInteractionType(interaction.type)}</TableCell>
               <TableCell className="max-w-xs truncate">
                 {interaction.notes}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end space-x-2">
+                  <Button variant="ghost" size="icon" asChild>
+                    <Link href={`/interactions/${interaction.id}`}>
+                      <Eye className="h-4 w-4" />
+                      <span className="sr-only">View</span>
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="icon" asChild>
+                    <Link href={`/interactions/${interaction.id}/edit`}>
+                      <Edit className="h-4 w-4" />
+                      <span className="sr-only">Edit</span>
+                    </Link>
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => interaction.id && handleDelete(interaction.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
