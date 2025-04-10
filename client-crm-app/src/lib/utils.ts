@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { Client, getUniqueCompanies } from "./db";
 
 /**
  * Combines multiple class names using clsx and tailwind-merge
@@ -53,4 +54,45 @@ export function debounce<T extends (...args: any[]) => any>(
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
+}
+
+/**
+ * Normalizes a company name for comparison
+ * @param company The company name to normalize
+ * @returns A normalized company name (trimmed, lowercase)
+ */
+export function normalizeCompanyName(company: string | undefined | null): string {
+  if (!company) return '';
+  return company.trim().toLowerCase();
+}
+
+/**
+ * Finds the closest matching company name from existing companies
+ * @param companyName The company name to check
+ * @param existingCompanies Array of existing company names
+ * @param threshold Similarity threshold (0-1), default 0.85
+ * @returns The matching company name or the original if no match found
+ */
+export async function findMatchingCompany(
+  companyName: string | undefined | null,
+  existingCompanies?: string[]
+): Promise<string> {
+  if (!companyName) return '';
+  
+  const normalizedInput = normalizeCompanyName(companyName);
+  if (!normalizedInput) return '';
+  
+  // Get companies if not provided
+  const companies = existingCompanies || await getUniqueCompanies();
+  
+  // Exact match check (case insensitive)
+  const exactMatch = companies.find(
+    company => normalizeCompanyName(company) === normalizedInput
+  );
+  
+  if (exactMatch) {
+    return exactMatch; // Return the existing company with original casing
+  }
+  
+  return companyName.trim(); // Return original if no match
 }

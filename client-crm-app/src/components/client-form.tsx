@@ -16,7 +16,7 @@ interface ClientFormProps {
 
 export function ClientForm({ client, isEditing = false }: ClientFormProps) {
   const router = useRouter();
-  const { createClient, updateClientData } = useClientStore();
+  const { createClientWithNormalizedCompany, updateClientData } = useClientStore();
   
   const [formData, setFormData] = useState({
     name: client?.name || '',
@@ -58,8 +58,8 @@ export function ClientForm({ client, isEditing = false }: ClientFormProps) {
         // Navigate back to the client detail page
         router.push(`/clients/${client.id}`);
       } else {
-        // Create a new client and navigate to the clients list
-        const newClientId = await createClient(formData);
+        // Create a new client with normalized company and navigate to the clients list
+        const newClientId = await createClientWithNormalizedCompany(formData);
         router.push('/clients');
       }
     } catch (err) {

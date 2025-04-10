@@ -14,6 +14,7 @@ import {
   addInteraction,
   getUniqueCompanies
 } from './db';
+import { findMatchingCompany } from './utils';
 
 interface ClientStore {
   // Client state
@@ -36,6 +37,7 @@ interface ClientStore {
   fetchRecentClients: (limit?: number) => Promise<void>;
   fetchClientById: (id: number) => Promise<void>;
   createClient: (client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>) => Promise<number>;
+  createClientWithNormalizedCompany: (client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>) => Promise<number>;
   updateClientData: (id: number, client: Partial<Omit<Client, 'id' | 'createdAt'>>) => Promise<void>;
   removeClient: (id: number) => Promise<void>;
   setSelectedClient: (client: Client | null) => void;
@@ -121,10 +123,54 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     }
   },
   
+  createClientWithNormalizedCompany: async (client) => {
+    set({ isLoading: true, error: null });
+    try {
+      // Get current companies list
+      const companies = get().companies;
+      
+      // If companies list is empty, fetch it first
+      if (companies.length === 0) {
+        await get().fetchCompanies();
+      }
+      
+      // Normalize company name if present
+      let normalizedClient = { ...client };
+      if (client.company) {
+        const normalizedCompany = await findMatchingCompany(client.company, get().companies);
+        normalizedClient.company = normalizedCompany;
+      }
+      
+      // Create client with normalized company
+      const id = await addClient(normalizedClient);
+      
+      // Refresh client list after adding
+      await get().fetchClients();
+      
+      // Refresh companies list if a new company was added
+      if (client.company) {
+        await get().fetchCompanies();
+      }
+      
+      set({ isLoading: false });
+      return id;
+    } catch (error) {
+      set({ error: (error as Error).message, isLoading: false });
+      throw error;
+    }
+  },
+  
   updateClientData: async (id, client) => {
     set({ isLoading: true, error: null });
     try {
-      await updateClient(id, client);
+      // If updating company, normalize it first
+      let updatedClient = { ...client };
+      if (client.company) {
+        const normalizedCompany = await findMatchingCompany(client.company, get().companies);
+        updatedClient.company = normalizedCompany;
+      }
+      
+      await updateClient(id, updatedClient);
       // Refresh client list and selected client
       await get().fetchClients();
       if (get().selectedClient?.id === id) {
