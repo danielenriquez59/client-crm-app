@@ -8,7 +8,7 @@ export interface Client {
   phone?: string;
   company?: string;
   location?: string;
-  status: 'active' | 'inactive' | 'prospect';
+  status: 'active' | 'inactive' | 'evaluation';
   createdAt: Date;
   updatedAt: Date;
 }

@@ -24,7 +24,7 @@ export function ClientForm({ client, isEditing = false }: ClientFormProps) {
     phone: client?.phone || '',
     company: client?.company || '',
     location: client?.location || '',
-    status: client?.status || 'active' as 'active' | 'inactive' | 'prospect',
+    status: client?.status || 'active' as 'active' | 'inactive' | 'evaluation',
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -157,7 +157,7 @@ export function ClientForm({ client, isEditing = false }: ClientFormProps) {
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
-                <option value="prospect">Prospect</option>
+                <option value="evaluation">evaluation</option>
               </select>
             </div>
           </div>

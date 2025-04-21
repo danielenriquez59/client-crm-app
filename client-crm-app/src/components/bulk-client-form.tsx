@@ -19,7 +19,7 @@ interface ClientRowData {
   phone: string;
   company: string;
   location: string;
-  status: 'active' | 'inactive' | 'prospect';
+  status: 'active' | 'inactive' | 'evaluation';
 }
 
 export function BulkClientForm() {
@@ -41,6 +41,8 @@ export function BulkClientForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successCount, setSuccessCount] = useState(0);
+  const [currentImportingClient, setCurrentImportingClient] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState(0);
   
   // Fetch companies on component mount
   useEffect(() => {
@@ -89,9 +91,9 @@ export function BulkClientForm() {
     const emails = clients.map(client => client.email.toLowerCase().trim());
     const uniqueEmails = new Set(emails);
     
-    if (emails.length !== uniqueEmails.size) {
-      return 'Duplicate email addresses found';
-    }
+    // if (emails.length !== uniqueEmails.size) {
+    //   return 'Duplicate email addresses found';
+    // }
     
     return null;
   };
@@ -108,13 +110,17 @@ export function BulkClientForm() {
     setIsSubmitting(true);
     setError(null);
     setSuccessCount(0);
+    setImportProgress(0);
     
     try {
       let successfulImports = 0;
+      const totalClients = clients.length;
       
       // Process each client sequentially
-      for (const client of clients) {
+      for (let i = 0; i < clients.length; i++) {
+        const client = clients[i];
         try {
+          setCurrentImportingClient(client.name);
           await createClientWithNormalizedCompany({
             name: client.name,
             email: client.email,
@@ -124,13 +130,18 @@ export function BulkClientForm() {
             status: client.status
           });
           successfulImports++;
+          // Update progress after each client (i+1 because we're 0-indexed)
+          setImportProgress(Math.round(((i + 1) / totalClients) * 100));
         } catch (err) {
           console.error(`Failed to import client ${client.name}:`, err);
           // Continue with other clients even if one fails
+          // Still update progress even for failed imports
+          setImportProgress(Math.round(((i + 1) / totalClients) * 100));
         }
       }
       
       setSuccessCount(successfulImports);
+      setCurrentImportingClient(null);
       
       if (successfulImports === clients.length) {
         // All clients imported successfully
@@ -153,7 +164,7 @@ export function BulkClientForm() {
     const csvContent = [
       headers.join(','),
       'John Doe,john@example.com,555-123-4567,Acme Inc,New York,active',
-      'Jane Smith,jane@example.com,555-987-6543,XYZ Corp,Chicago,prospect'
+      'Jane Smith,jane@example.com,555-987-6543,XYZ Corp,Chicago,evaluation'
     ].join('\n');
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -202,8 +213,8 @@ export function BulkClientForm() {
           const values = lines[i].split(',').map(v => v.trim());
           
           const status = values[statusIndex] || 'active';
-          const validStatus = ['active', 'inactive', 'prospect'].includes(status) 
-            ? status as 'active' | 'inactive' | 'prospect' 
+          const validStatus = ['active', 'inactive', 'evaluation'].includes(status) 
+            ? status as 'active' | 'inactive' | 'evaluation' 
             : 'active';
           
           importedClients.push({
@@ -341,7 +352,7 @@ export function BulkClientForm() {
                     <TableCell>
                       <Select
                         value={client.status}
-                        onValueChange={(value) => handleChange(client.id, 'status', value as 'active' | 'inactive' | 'prospect')}
+                        onValueChange={(value) => handleChange(client.id, 'status', value as 'active' | 'inactive' | 'evaluation')}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Status" />
@@ -349,7 +360,7 @@ export function BulkClientForm() {
                         <SelectContent>
                           <SelectItem value="active">Active</SelectItem>
                           <SelectItem value="inactive">Inactive</SelectItem>
-                          <SelectItem value="prospect">Prospect</SelectItem>
+                          <SelectItem value="evaluation">evaluation</SelectItem>
                         </SelectContent>
                       </Select>
                     </TableCell>
@@ -395,6 +406,18 @@ export function BulkClientForm() {
               >
                 {isSubmitting ? 'Importing...' : 'Import Clients'}
               </Button>
+              {isSubmitting && (
+                <div className="ml-2 text-sm text-muted-foreground flex items-center">
+                  <div className="flex flex-col">
+                    <div className="flex items-center">
+                      Currently importing: <span className="font-medium ml-1">{currentImportingClient}</span>
+                    </div>
+                    <div className="flex items-center">
+                      Progress: <span className="font-medium ml-1">{importProgress}%</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </form>
