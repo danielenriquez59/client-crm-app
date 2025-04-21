@@ -20,7 +20,7 @@ Company information
 Location details
 Interaction history with timestamps
 Work notes and action items
-Status tracking (active, inactive, prospect, etc.)
+Status tracking (active, inactive, evaluation, etc.)
 2.3 User Interface
 Dashboard overview showing key metrics (total clients, recent interactions)
 Client list view with sortable columns
