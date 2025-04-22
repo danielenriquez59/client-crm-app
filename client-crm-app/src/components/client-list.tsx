@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useClientStore } from '@/lib/store';
+import { useClientStore } from '@/lib/stores';
 import { formatDate } from '@/lib/utils';
 import { Client } from '@/lib/db';
 import { Edit, Trash2, Eye, Search } from 'lucide-react';

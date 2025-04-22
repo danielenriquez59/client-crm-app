@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { formatDate } from '@/lib/utils';
 import { Interaction } from '@/lib/db';
-import { useClientStore } from '@/lib/store';
+import { useClientStore } from '@/lib/stores';
 import { Search } from 'lucide-react';
 
 interface AllInteractionsListProps {

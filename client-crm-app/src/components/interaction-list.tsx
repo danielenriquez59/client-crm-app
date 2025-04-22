@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
 import { Interaction, Client } from '@/lib/db';
-import { useClientStore } from '@/lib/store';
+import { useClientStore } from '@/lib/stores';
 import { PlusCircle } from 'lucide-react';
 import { InteractionModal } from './interaction-modal';
 import { Badge } from './ui/badge';

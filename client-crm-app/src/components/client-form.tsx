@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Client } from '@/lib/db';
-import { useClientStore } from '@/lib/store';
+import { useClientStore } from '@/lib/stores';
 import { CompanySelector } from './company-selector';
 
 interface ClientFormProps {

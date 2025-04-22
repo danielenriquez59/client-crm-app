@@ -11,7 +11,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { useClientStore } from '@/lib/store';
+import { useClientStore } from '@/lib/stores';
 import { Building, ExternalLink, Pencil } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 

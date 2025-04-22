@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Company } from '@/lib/db';
-import { useClientStore } from '@/lib/store';
+import { useClientStore } from '@/lib/stores';
 
 interface CompanyFormProps {
   company?: Company;

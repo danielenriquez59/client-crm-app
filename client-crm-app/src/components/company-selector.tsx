@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useClientStore } from '@/lib/store';
+import { useClientStore } from '@/lib/stores';
 import { 
   Select, 
   SelectContent, 

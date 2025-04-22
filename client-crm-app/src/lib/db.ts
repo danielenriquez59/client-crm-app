@@ -180,6 +180,19 @@ export async function addClient(client: Omit<Client, 'id' | 'createdAt' | 'updat
   return typeof id === 'number' ? id : Number(id);
 }
 
+export async function addBulkClients(clients: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<number[]> {
+  const now = new Date();
+  const ids = await db.clients.bulkAdd(
+    clients.map(client => ({
+      ...client,
+      createdAt: now,
+      updatedAt: now
+    })),
+    { allKeys: true }
+  );
+  return ids.map(id => typeof id === 'number' ? id : Number(id));
+}
+
 export async function updateClient(id: number, client: Partial<Omit<Client, 'id' | 'createdAt'>>): Promise<number> {
   // Ensure we're using the new schema with companyId
   const { company, ...clientData } = client as any;
@@ -290,6 +303,19 @@ export async function addCompany(company: Omit<Company, 'id' | 'createdAt' | 'up
     updatedAt: now
   });
   return typeof id === 'number' ? id : Number(id);
+}
+
+export async function addBulkCompanies(companies: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<number[]> {
+  const now = new Date();
+  const ids = await db.companies.bulkAdd(
+    companies.map(company => ({
+      ...company,
+      createdAt: now,
+      updatedAt: now
+    })),
+    { allKeys: true }
+  );
+  return ids.map(id => typeof id === 'number' ? id : Number(id));
 }
 
 export async function getCompanyById(id: number): Promise<Company | undefined> {

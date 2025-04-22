@@ -12,7 +12,7 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useClientStore } from '@/lib/store';
+import { useClientStore } from '@/lib/stores';
 import { ClientList } from '@/components/client-list';
 import { Building, Globe, Pencil, Trash2, Users } from 'lucide-react';
 import { format } from 'date-fns';

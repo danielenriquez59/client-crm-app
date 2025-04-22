@@ -6,26 +6,30 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Client } from '@/lib/db';
-import { useClientStore } from '@/lib/store';
+import { useClientStore } from '@/lib/stores';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Trash2, Plus, Download, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { CompanySelector } from './company-selector';
 
 interface ClientRowData {
   id: string;
   name: string;
   email: string;
   phone: string;
-  companyName: string;
-  companyId?: number;
+  company: string;
   location: string;
   status: 'active' | 'inactive' | 'evaluation';
 }
 
 export function BulkClientForm() {
   const router = useRouter();
-  const { createClientWithCompany, fetchCompanies, companies } = useClientStore();
+  const { 
+    createClientWithCompany, 
+    fetchCompanies, 
+    companies, 
+    createBulkClients, 
+    createBulkCompanies 
+  } = useClientStore();
   
   const [clients, setClients] = useState<ClientRowData[]>([
     {
@@ -33,8 +37,7 @@ export function BulkClientForm() {
       name: '',
       email: '',
       phone: '',
-      companyName: '',
-      companyId: undefined,
+      company: '',
       location: '',
       status: 'active'
     }
@@ -45,13 +48,14 @@ export function BulkClientForm() {
   const [successCount, setSuccessCount] = useState(0);
   const [currentImportingClient, setCurrentImportingClient] = useState<string | null>(null);
   const [importProgress, setImportProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState<'idle' | 'companies' | 'clients'>('idle');
   
   // Fetch companies on component mount
   useEffect(() => {
     fetchCompanies();
   }, [fetchCompanies]);
   
-  const addRow = () => {
+  const addClient = () => {
     setClients([
       ...clients,
       {
@@ -59,76 +63,102 @@ export function BulkClientForm() {
         name: '',
         email: '',
         phone: '',
-        companyName: '',
-        companyId: undefined,
+        company: '',
         location: '',
         status: 'active'
       }
     ]);
   };
   
-  const removeRow = (id: string) => {
-    if (clients.length === 1) {
-      return; // Keep at least one row
-    }
+  const removeClient = (id: string) => {
+    if (clients.length === 1) return;
     setClients(clients.filter(client => client.id !== id));
   };
   
   const handleChange = (id: string, field: keyof ClientRowData, value: string) => {
-    setClients(clients.map(client => 
-      client.id === id ? { ...client, [field]: value } : client
-    ));
-  };
-  
-  const handleCompanyChange = (id: string, companyId: number | undefined) => {
-    setClients(clients.map(client => {
-      if (client.id === id) {
-        // Find company name if companyId is provided
-        let companyName = '';
-        if (companyId) {
-          const company = companies.find(c => c.id === companyId);
-          if (company) {
-            companyName = company.name;
-          }
-        }
-        
-        return { 
-          ...client, 
-          companyId, 
-          companyName 
-        };
-      }
-      return client;
-    }));
-  };
-  
-  const validateClients = () => {
-    // Check for empty required fields
-    const invalidClients = clients.filter(client => 
-      !client.name.trim() || !client.email.trim()
+    setClients(prev => 
+      prev.map(client => 
+        client.id === id ? { ...client, [field]: value } : client
+      )
     );
+  };
+  
+  // Extract unique company names from client entries
+  const extractUniqueCompanyNames = (clientData: ClientRowData[]): string[] => {
+    const companyNames = clientData
+      .map(client => client.company.trim())
+      .filter(name => name !== '');
     
-    if (invalidClients.length > 0) {
-      return 'All clients must have a name and email';
+    // Remove duplicates by converting to Set and back to array
+    return [...new Set(companyNames)];
+  };
+  
+  // Process companies - check existing ones and create new ones
+  const processCompanies = async (uniqueCompanyNames: string[]): Promise<Map<string, number>> => {
+    setProcessingStage('companies');
+    
+    // Create a map to store company name -> id mapping
+    const companyMap = new Map<string, number>();
+    
+    // Map existing companies
+    for (const company of companies) {
+      companyMap.set(company.name.toLowerCase(), company.id!);
     }
     
-    // Check for duplicate emails
-    const emails = clients.map(client => client.email.toLowerCase().trim());
-    const uniqueEmails = new Set(emails);
+    // Find company names that don't exist yet
+    const companiesToCreate: { name: string }[] = [];
     
-    // if (emails.length !== uniqueEmails.size) {
-    //   return 'Duplicate email addresses found';
-    // }
+    for (const name of uniqueCompanyNames) {
+      if (!companyMap.has(name.toLowerCase())) {
+        companiesToCreate.push({ name });
+      }
+    }
     
-    return null;
+    // Create new companies if needed
+    if (companiesToCreate.length > 0) {
+      try {
+        const newCompanyIds = await createBulkCompanies(companiesToCreate);
+        
+        // Add new companies to the map
+        for (let i = 0; i < companiesToCreate.length; i++) {
+          const companyName = companiesToCreate[i].name;
+          const companyId = newCompanyIds[i];
+          companyMap.set(companyName.toLowerCase(), companyId);
+        }
+      } catch (error) {
+        console.error('Failed to create companies:', error);
+        throw new Error('Failed to create companies');
+      }
+    }
+    
+    return companyMap;
+  };
+  
+  // Process clients using the company mapping
+  const processClients = async (clientData: ClientRowData[], companyMap: Map<string, number>): Promise<number[]> => {
+    setProcessingStage('clients');
+    
+    // Format clients with company IDs
+    const clientsToCreate = clientData.map(client => ({
+      name: client.name,
+      email: client.email,
+      phone: client.phone,
+      companyId: client.company ? companyMap.get(client.company.toLowerCase()) : undefined,
+      location: client.location,
+      status: client.status
+    }));
+    
+    // Bulk create clients
+    return await createBulkClients(clientsToCreate);
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const validationError = validateClients();
-    if (validationError) {
-      setError(validationError);
+    // Validate required fields
+    const invalidClients = clients.filter(client => !client.name || !client.email);
+    if (invalidClients.length > 0) {
+      setError('All clients must have a name and email');
       return;
     }
     
@@ -136,47 +166,36 @@ export function BulkClientForm() {
     setError(null);
     setSuccessCount(0);
     setImportProgress(0);
+    setProcessingStage('idle');
     
     try {
-      let successfulImports = 0;
-      const totalClients = clients.length;
+      // 1. Extract unique company names
+      const uniqueCompanyNames = extractUniqueCompanyNames(clients);
+      setCurrentImportingClient('Processing companies...');
+      setImportProgress(10);
       
-      // Process each client sequentially
-      for (let i = 0; i < clients.length; i++) {
-        const client = clients[i];
-        try {
-          setCurrentImportingClient(client.name);
-          await createClientWithCompany({
-            name: client.name,
-            email: client.email,
-            phone: client.phone,
-            companyId: client.companyId,
-            companyName: client.companyName,
-            location: client.location,
-            status: client.status
-          });
-          successfulImports++;
-          // Update progress after each client (i+1 because we're 0-indexed)
-          setImportProgress(Math.round(((i + 1) / totalClients) * 100));
-        } catch (err) {
-          console.error(`Failed to import client ${client.name}:`, err);
-          // Continue with other clients even if one fails
-          // Still update progress even for failed imports
-          setImportProgress(Math.round(((i + 1) / totalClients) * 100));
-        }
-      }
+      // 2. Process companies - check existing ones and create new ones
+      const companyMap = await processCompanies(uniqueCompanyNames);
+      setImportProgress(40);
       
-      setSuccessCount(successfulImports);
+      // 3. Process clients using the company mapping
+      setCurrentImportingClient('Creating clients...');
+      const clientIds = await processClients(clients, companyMap);
+      setImportProgress(100);
+      
+      // 4. Show success message and redirect
+      setSuccessCount(clientIds.length);
       setCurrentImportingClient(null);
+      setProcessingStage('idle');
       
-      if (successfulImports === clients.length) {
+      if (clientIds.length === clients.length) {
         // All clients imported successfully
         setTimeout(() => {
           router.push('/clients');
         }, 2000);
       } else {
         // Some clients failed to import
-        setError(`Imported ${successfulImports} of ${clients.length} clients successfully`);
+        setError(`Imported ${clientIds.length} of ${clients.length} clients successfully`);
       }
     } catch (err) {
       setError((err as Error).message || 'Failed to import clients');
@@ -211,16 +230,11 @@ export function BulkClientForm() {
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const csvText = event.target?.result as string;
-        const lines = csvText.split('\n').filter(line => line.trim());
+        const csvContent = event.target?.result as string;
+        const rows = csvContent.split('\n');
         
-        // Skip header row
-        if (lines.length < 2) {
-          setError('CSV file is empty or invalid');
-          return;
-        }
-        
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        // Parse header row to find column indices
+        const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
         const nameIndex = headers.indexOf('name');
         const emailIndex = headers.indexOf('email');
         const phoneIndex = headers.indexOf('phone');
@@ -229,27 +243,36 @@ export function BulkClientForm() {
         const statusIndex = headers.indexOf('status');
         
         if (nameIndex === -1 || emailIndex === -1) {
-          setError('CSV must contain at least Name and Email columns');
+          setError('CSV must include Name and Email columns');
           return;
         }
         
         const importedClients: ClientRowData[] = [];
         
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.trim());
+        // Start from row 1 (skip headers)
+        for (let i = 1; i < rows.length; i++) {
+          if (!rows[i].trim()) continue; // Skip empty rows
           
-          const status = values[statusIndex] || 'active';
-          const validStatus = ['active', 'inactive', 'evaluation'].includes(status) 
-            ? status as 'active' | 'inactive' | 'evaluation' 
-            : 'active';
+          const values = rows[i].split(',').map(v => v.trim());
+          
+          // Validate required fields
+          if (!values[nameIndex] || !values[emailIndex]) continue;
+          
+          // Validate status if present
+          let validStatus: 'active' | 'inactive' | 'evaluation' = 'active';
+          if (statusIndex !== -1 && values[statusIndex]) {
+            const status = values[statusIndex].toLowerCase();
+            if (['active', 'inactive', 'evaluation'].includes(status)) {
+              validStatus = status as 'active' | 'inactive' | 'evaluation';
+            }
+          }
           
           importedClients.push({
-            id: Date.now().toString() + i,
-            name: values[nameIndex] || '',
-            email: values[emailIndex] || '',
+            id: Date.now().toString() + i, // Ensure unique ID
+            name: values[nameIndex],
+            email: values[emailIndex],
             phone: values[phoneIndex] || '',
-            companyName: values[companyIndex] || '',
-            companyId: undefined, // Will be resolved when importing
+            company: values[companyIndex] || '',
             location: values[locationIndex] || '',
             status: validStatus
           });
@@ -303,21 +326,21 @@ export function BulkClientForm() {
             onClick={exportTemplate}
           >
             <Download className="mr-2 h-4 w-4" />
-            Get Sample Template
+            Download Template
           </Button>
-
         </div>
       </CardHeader>
+      
       <CardContent>
         {error && (
-          <div className="mb-4 p-3 rounded-md bg-destructive/15 text-destructive">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
         
         {successCount > 0 && (
-          <div className="mb-4 p-3 rounded-md bg-green-500/15 text-green-600">
-            Successfully imported {successCount} clients! Redirecting to clients list...
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+            Successfully imported {successCount} clients!
           </div>
         )}
         
@@ -363,22 +386,23 @@ export function BulkClientForm() {
                       />
                     </TableCell>
                     <TableCell>
-                      <CompanySelector
-                        value={client.companyId}
-                        onChange={(companyId) => handleCompanyChange(client.id, companyId)}
+                      <Input
+                        value={client.company}
+                        onChange={(e) => handleChange(client.id, 'company', e.target.value)}
+                        placeholder="Company name"
                       />
                     </TableCell>
                     <TableCell>
                       <Input
                         value={client.location}
                         onChange={(e) => handleChange(client.id, 'location', e.target.value)}
-                        placeholder="City, State"
+                        placeholder="Location"
                       />
                     </TableCell>
                     <TableCell>
                       <Select
                         value={client.status}
-                        onValueChange={(value) => handleChange(client.id, 'status', value as 'active' | 'inactive' | 'evaluation')}
+                        onValueChange={(value) => handleChange(client.id, 'status', value)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Status" />
@@ -386,7 +410,7 @@ export function BulkClientForm() {
                         <SelectContent>
                           <SelectItem value="active">Active</SelectItem>
                           <SelectItem value="inactive">Inactive</SelectItem>
-                          <SelectItem value="evaluation">evaluation</SelectItem>
+                          <SelectItem value="evaluation">Evaluation</SelectItem>
                         </SelectContent>
                       </Select>
                     </TableCell>
@@ -395,7 +419,7 @@ export function BulkClientForm() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() => removeRow(client.id)}
+                        onClick={() => removeClient(client.id)}
                         disabled={clients.length === 1}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -407,11 +431,12 @@ export function BulkClientForm() {
             </Table>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="flex justify-between items-start mb-4">
             <Button 
               type="button" 
               variant="outline" 
-              onClick={addRow}
+              onClick={addClient}
+              disabled={isSubmitting}
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Row
@@ -436,7 +461,11 @@ export function BulkClientForm() {
                 <div className="ml-2 text-sm text-muted-foreground flex items-center">
                   <div className="flex flex-col">
                     <div className="flex items-center">
-                      Currently importing: <span className="font-medium ml-1">{currentImportingClient}</span>
+                      {processingStage === 'companies' && 'Processing companies...'}
+                      {processingStage === 'clients' && 'Creating clients...'}
+                      {processingStage === 'idle' && currentImportingClient && (
+                        <>Currently importing: <span className="font-medium ml-1">{currentImportingClient}</span></>
+                      )}
                     </div>
                     <div className="flex items-center">
                       Progress: <span className="font-medium ml-1">{importProgress}%</span>

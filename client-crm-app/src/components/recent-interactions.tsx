@@ -11,7 +11,7 @@ import {
   TableRow 
 } from './ui/table';
 import { formatDate } from '@/lib/utils';
-import { useClientStore } from '@/lib/store';
+import { useClientStore } from '@/lib/stores';
 import { Skeleton } from './ui/skeleton';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';

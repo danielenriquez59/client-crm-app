@@ -21,7 +21,7 @@ import {
   SelectValue 
 } from './ui/select';
 import { ClientMultiSelect } from './client-multi-select';
-import { useClientStore } from '@/lib/store';
+import { useClientStore } from '@/lib/stores';
 import { Client } from '@/lib/db';
 
 interface InteractionModalProps {
