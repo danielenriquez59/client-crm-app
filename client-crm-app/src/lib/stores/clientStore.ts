@@ -8,11 +8,13 @@ import {
   deleteClient, 
   getRecentClients,
   addBulkClients,
+  getClientsWithCompanyNames,
+  getRecentClientsWithCompanyNames,
 } from '../db';
 
 // Client state and actions
 export interface ClientState {
-  clients: Client[];
+  clients: (Client & { companyName?: string })[];
   selectedClient: Client | null;
   isLoading: boolean;
   error: string | null;
@@ -49,7 +51,8 @@ export const createClientSlice: StateCreator<
   fetchClients: async () => {
     set({ isLoading: true, error: null });
     try {
-      const clients = await getAllClients();
+      // Use the new function that includes company names
+      const clients = await getClientsWithCompanyNames();
       set({ clients, isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
@@ -59,7 +62,8 @@ export const createClientSlice: StateCreator<
   fetchRecentClients: async (limit = 5) => {
     set({ isLoading: true, error: null });
     try {
-      const clients = await getRecentClients(limit);
+      // Use the new function that includes company names
+      const clients = await getRecentClientsWithCompanyNames(limit);
       set({ clients, isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });

@@ -143,6 +143,60 @@ export async function getAllClients(): Promise<Client[]> {
   return clients.map(client => convertDates(client));
 }
 
+export async function getClientsWithCompanyNames(): Promise<(Client & { companyName?: string })[]> {
+  // Get all clients and companies
+  const [clients, companies] = await Promise.all([
+    db.clients.toArray(),
+    db.companies.toArray()
+  ]);
+  
+  // Create a map of company IDs to company names for quick lookup
+  const companyMap = new Map(
+    companies.map(company => [company.id, company.name])
+  );
+  
+  // Enhance clients with company names
+  return clients.map(client => {
+    const enhancedClient = convertDates(client);
+    
+    // If client has a companyId, look up the company name
+    if (client.companyId) {
+      enhancedClient.companyName = companyMap.get(client.companyId);
+    }
+    
+    return enhancedClient;
+  });
+}
+
+export async function getRecentClientsWithCompanyNames(limit: number = 5): Promise<(Client & { companyName?: string })[]> {
+  // Get all companies for mapping
+  const companies = await db.companies.toArray();
+  
+  // Create a map of company IDs to company names for quick lookup
+  const companyMap = new Map(
+    companies.map(company => [company.id, company.name])
+  );
+  
+  // Get recent clients
+  const clients = await db.clients
+    .orderBy('updatedAt')
+    .reverse()
+    .limit(limit)
+    .toArray();
+  
+  // Enhance clients with company names
+  return clients.map(client => {
+    const enhancedClient = convertDates(client);
+    
+    // If client has a companyId, look up the company name
+    if (client.companyId) {
+      enhancedClient.companyName = companyMap.get(client.companyId);
+    }
+    
+    return enhancedClient;
+  });
+}
+
 export async function getRecentClients(limit: number = 5): Promise<Client[]> {
   const clients = await db.clients
     .orderBy('updatedAt')
@@ -332,6 +386,36 @@ export async function updateCompany(id: number, company: Partial<Omit<Company, '
 
 export async function deleteCompany(id: number): Promise<void> {
   await db.companies.delete(id);
+}
+
+export async function removeCompanyAndUpdateClients(id: number): Promise<number> {
+  // Use a transaction to ensure all operations succeed or fail together
+  return await db.transaction('rw', [db.companies, db.clients], async () => {
+    // Find all clients associated with this company
+    const clientsToUpdate = await db.clients
+      .where('companyId')
+      .equals(id)
+      .toArray();
+    
+    // Update all these clients to remove the company association
+    if (clientsToUpdate.length > 0) {
+      const now = new Date();
+      const updates = clientsToUpdate.map(client => ({
+        ...client,
+        companyId: undefined, // Remove company association
+        updatedAt: now
+      }));
+      
+      // Bulk update the clients
+      await db.clients.bulkPut(updates);
+    }
+    
+    // Delete the company
+    await db.companies.delete(id);
+    
+    // Return the number of clients that were updated
+    return clientsToUpdate.length;
+  });
 }
 
 export async function getAllCompanies(): Promise<Company[]> {

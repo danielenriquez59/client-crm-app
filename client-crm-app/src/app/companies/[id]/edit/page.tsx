@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CompanyForm } from "@/components/company-form";
 import { ArrowLeft, Trash2 } from "lucide-react";
-import { useClientStore } from "@/lib/store";
+import { useClientStore } from "@/lib/stores";
 
 interface EditCompanyPageProps {
   params: Promise<{

@@ -133,7 +133,7 @@ export default function Home() {
               <Link href="/clients">View All</Link>
             </Button>
           </div>
-          <ClientList limit={5} />
+          <ClientList limit={10} />
         </div>
 
         <div className="space-y-4">
@@ -143,7 +143,7 @@ export default function Home() {
               <Link href="/companies">View All</Link>
             </Button>
           </div>
-          <CompanyList limit={5} />
+          <CompanyList limit={10} />
         </div>
       </div>
 

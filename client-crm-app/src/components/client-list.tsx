@@ -37,6 +37,7 @@ export function ClientList({ limit, showSearch = true }: ClientListProps) {
           (client) =>
             client.name.toLowerCase().includes(lowercasedSearch) ||
             client.email.toLowerCase().includes(lowercasedSearch) ||
+            (client.companyName && client.companyName.toLowerCase().includes(lowercasedSearch)) ||
             (client.company && client.company.toLowerCase().includes(lowercasedSearch))
         )
       );
@@ -109,7 +110,9 @@ export function ClientList({ limit, showSearch = true }: ClientListProps) {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-sm">{client.email}</td>
-                  <td className="px-4 py-3 text-sm hidden md:table-cell">{client.company || '-'}</td>
+                  <td className="px-4 py-3 text-sm hidden md:table-cell">
+                    {client.companyName || client.company || '-'}
+                  </td>
                   <td className="px-4 py-3 text-sm hidden md:table-cell">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       client.status === 'active' 
