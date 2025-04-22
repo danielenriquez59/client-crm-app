@@ -84,7 +84,8 @@ export function ClientList({ limit, showSearch = true }: ClientListProps) {
 
     return (
       <div className="rounded-md border">
-        <div className="overflow-x-auto">
+          <p className="m-2">{filteredClients.length} clients</p>
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/50">
