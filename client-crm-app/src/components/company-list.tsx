@@ -87,6 +87,7 @@ export function CompanyList({ limit, showSearch = true }: CompanyListProps) {
               <tr className="border-b bg-muted/50">
                 <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Industry</th>
+                <th className="px-4 py-3 text-center text-sm font-medium">Clients</th>
                 <th className="px-4 py-3 text-left text-sm font-medium hidden md:table-cell">Website</th>
                 <th className="px-4 py-3 text-left text-sm font-medium hidden lg:table-cell">Last Updated</th>
                 <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
@@ -104,6 +105,15 @@ export function CompanyList({ limit, showSearch = true }: CompanyListProps) {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-sm">{company.industry || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-center">
+                    <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      (company.clientCount || 0) > 0 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {company.clientCount || 0}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-sm hidden md:table-cell">
                     {company.website ? (
                       <a 

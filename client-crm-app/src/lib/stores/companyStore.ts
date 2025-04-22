@@ -9,12 +9,13 @@ import {
   getCompanyWithClients,
   getAllCompanies,
   addBulkCompanies,
-  removeCompanyAndUpdateClients
+  removeCompanyAndUpdateClients,
+  getCompaniesWithClientCounts
 } from '../db';
 
 // Company state and actions
 export interface CompanyState {
-  companies: Company[];
+  companies: (Company & { clientCount?: number })[];
   selectedCompany: Company | null;
   isLoadingCompanies: boolean;
   error: string | null;
@@ -53,7 +54,8 @@ export const createCompanySlice: StateCreator<
   fetchCompanies: async () => {
     set({ isLoadingCompanies: true, error: null, message: null });
     try {
-      const companies = await getAllCompanies();
+      // Use the new function that includes client counts
+      const companies = await getCompaniesWithClientCounts();
       set({ companies, isLoadingCompanies: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoadingCompanies: false, message: null });

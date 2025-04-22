@@ -426,6 +426,32 @@ export async function getAllCompanies(): Promise<Company[]> {
   return companies.map(company => convertDates(company));
 }
 
+export async function getCompaniesWithClientCounts(): Promise<(Company & { clientCount: number })[]> {
+  // Get all companies and clients
+  const [companies, clients] = await Promise.all([
+    db.companies.orderBy('name').toArray(),
+    db.clients.toArray()
+  ]);
+  
+  // Create a map to count clients per company
+  const clientCountMap = new Map<number, number>();
+  
+  // Count clients for each company
+  clients.forEach(client => {
+    if (client.companyId) {
+      const currentCount = clientCountMap.get(client.companyId) || 0;
+      clientCountMap.set(client.companyId, currentCount + 1);
+    }
+  });
+  
+  // Enhance companies with client counts
+  return companies.map(company => {
+    const enhancedCompany = convertDates(company) as Company & { clientCount: number };
+    enhancedCompany.clientCount = clientCountMap.get(company.id as number) || 0;
+    return enhancedCompany;
+  });
+}
+
 export async function getClientsByCompany(companyId: number): Promise<Client[]> {
   const clients = await db.clients
     .where('companyId')
