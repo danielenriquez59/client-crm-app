@@ -82,7 +82,7 @@ export function RecentInteractions({ limit = 10 }: RecentInteractionsProps) {
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border bg-white shadow-md">
       <Table>
         <TableHeader>
           <TableRow>

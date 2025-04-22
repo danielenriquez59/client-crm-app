@@ -11,6 +11,7 @@ import { useClientStore } from "@/lib/stores";
 import { InteractionModal } from "@/components/interaction-modal";
 import { CompanyList } from "@/components/company-list";
 import { CompanyModal } from "@/components/company-modal";
+import { ClientModal } from "@/components/client-modal";
 
 export default function Home() {
   const { 
@@ -25,16 +26,16 @@ export default function Home() {
   } = useClientStore();
   const [interactionModalOpen, setInteractionModalOpen] = useState(false);
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
+  const [clientModalOpen, setClientModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchRecentClients(10);
+    fetchRecentClients();
     fetchAllInteractions();
     fetchCompanies();
   }, [fetchRecentClients, fetchAllInteractions, fetchCompanies]);
 
   const stats = {
     total: clients.length,
-    active: clients.filter(client => client.status === 'active').length,
     new: clients.filter(client => {
       const createdAt = new Date(client.createdAt);
       const thirtyDaysAgo = new Date();
@@ -55,18 +56,16 @@ export default function Home() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <div className="flex space-x-2">
+        <div className="grid gap-2 grid-cols-3">
           <Button onClick={() => setInteractionModalOpen(true)}>
             <MessageSquarePlus className="mr-2 h-4 w-4" />
             Add Interaction
           </Button>
-          <Button asChild>
-            <Link href="/clients/new">
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add Client
-            </Link>
+          <Button onClick={() => setClientModalOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add Client
           </Button>
-          <Button variant="outline" onClick={() => setCompanyModalOpen(true)}>
+          <Button  onClick={() => setCompanyModalOpen(true)}>
             <Building className="mr-2 h-4 w-4" />
             Add Company
           </Button>
@@ -147,6 +146,11 @@ export default function Home() {
       <CompanyModal 
         isOpen={companyModalOpen} 
         onClose={() => setCompanyModalOpen(false)} 
+      />
+      
+      <ClientModal
+        isOpen={clientModalOpen}
+        onClose={() => setClientModalOpen(false)}
       />
     </div>
   );

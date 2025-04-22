@@ -152,7 +152,7 @@ export function ClientList({ limit, showSearch = true, companyId }: ClientListPr
     }
 
     return (
-      <div className="rounded-md border">
+      <div className="rounded-md border bg-white shadow-md">
           <p className="m-2">{filteredClients.length} clients</p>
           <div className="overflow-x-auto">
           <table className="w-full">

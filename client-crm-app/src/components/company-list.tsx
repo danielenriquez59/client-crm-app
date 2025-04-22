@@ -140,7 +140,7 @@ export function CompanyList({ limit, showSearch = true }: CompanyListProps) {
     }
     
     return (
-      <div className="rounded-md border">
+      <div className="rounded-md border bg-white shadow-md">
         <p className="m-2">{filteredCompanies.length} companies</p>
         <div className="overflow-x-auto">
           <table className="w-full">
