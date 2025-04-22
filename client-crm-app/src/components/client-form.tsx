@@ -205,6 +205,7 @@ export function ClientForm({ client, isEditing = false }: ClientFormProps) {
               Cancel
             </Button>
             <Button 
+              className="hover:cursor-pointer"
               type="submit" 
               disabled={isSubmitting}
             >
