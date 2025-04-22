@@ -7,17 +7,23 @@ import { Input } from '@/components/ui/input';
 import { useClientStore } from '@/lib/stores';
 import { formatDate } from '@/lib/utils';
 import { Client } from '@/lib/db';
-import { Edit, Trash2, Eye, Search } from 'lucide-react';
+import { Edit, Trash2, Eye, Search, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface ClientListProps {
   limit?: number;
   showSearch?: boolean;
 }
 
+// Define sort types
+type SortField = 'name' | 'email' | 'company' | 'status' | 'updatedAt';
+type SortDirection = 'asc' | 'desc';
+
 export function ClientList({ limit, showSearch = true }: ClientListProps) {
   const { clients, fetchClients, fetchRecentClients, removeClient, isLoading, error } = useClientStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [filteredClients, setFilteredClients] = useState<(Client & { companyName?: string })[]>([]);
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   useEffect(() => {
     if (limit) {
@@ -28,21 +34,79 @@ export function ClientList({ limit, showSearch = true }: ClientListProps) {
   }, [fetchClients, fetchRecentClients, limit]);
 
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredClients(clients);
-    } else {
+    // Filter clients based on search term
+    let filtered = clients;
+    if (searchTerm.trim() !== '') {
       const lowercasedSearch = searchTerm.toLowerCase();
-      setFilteredClients(
-        clients.filter(
-          (client) =>
-            client.name.toLowerCase().includes(lowercasedSearch) ||
-            client.email.toLowerCase().includes(lowercasedSearch) ||
-            (client.companyName && client.companyName.toLowerCase().includes(lowercasedSearch)) ||
-            (client.company && client.company.toLowerCase().includes(lowercasedSearch))
-        )
+      filtered = clients.filter(
+        (client) =>
+          client.name.toLowerCase().includes(lowercasedSearch) ||
+          client.email.toLowerCase().includes(lowercasedSearch) ||
+          (client.companyName && client.companyName.toLowerCase().includes(lowercasedSearch)) ||
+          (client.company && client.company.toLowerCase().includes(lowercasedSearch))
       );
     }
-  }, [clients, searchTerm]);
+    
+    // Sort the filtered clients
+    const sorted = [...filtered].sort((a, b) => {
+      // Handle different field types
+      switch (sortField) {
+        case 'name':
+          return sortDirection === 'asc' 
+            ? a.name.localeCompare(b.name) 
+            : b.name.localeCompare(a.name);
+        
+        case 'email':
+          return sortDirection === 'asc' 
+            ? a.email.localeCompare(b.email) 
+            : b.email.localeCompare(a.email);
+        
+        case 'company':
+          const companyA = a.companyName || a.company || '';
+          const companyB = b.companyName || b.company || '';
+          return sortDirection === 'asc' 
+            ? companyA.localeCompare(companyB) 
+            : companyB.localeCompare(companyA);
+        
+        case 'status':
+          return sortDirection === 'asc' 
+            ? a.status.localeCompare(b.status) 
+            : b.status.localeCompare(a.status);
+        
+        case 'updatedAt':
+          const dateA = new Date(a.updatedAt).getTime();
+          const dateB = new Date(b.updatedAt).getTime();
+          return sortDirection === 'asc' 
+            ? dateA - dateB 
+            : dateB - dateA;
+            
+        default:
+          return 0;
+      }
+    });
+    
+    // Apply limit if specified
+    setFilteredClients(limit ? sorted.slice(0, limit) : sorted);
+  }, [clients, searchTerm, limit, sortField, sortDirection]);
+
+  const handleSort = (field: SortField) => {
+    // If clicking the same field, toggle direction
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // If clicking a new field, set it as the sort field and default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+  
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    
+    return sortDirection === 'asc' 
+      ? <ChevronUp className="ml-1 h-4 w-4 inline" /> 
+      : <ChevronDown className="ml-1 h-4 w-4 inline" />;
+  };
 
   const handleDelete = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
@@ -90,11 +154,36 @@ export function ClientList({ limit, showSearch = true }: ClientListProps) {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Email</th>
-                <th className="px-4 py-3 text-left text-sm font-medium hidden md:table-cell">Company</th>
-                <th className="px-4 py-3 text-left text-sm font-medium hidden md:table-cell">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-medium hidden lg:table-cell">Last Updated</th>
+                <th 
+                  className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/70"
+                  onClick={() => handleSort('name')}
+                >
+                  Name {renderSortIcon('name')}
+                </th>
+                <th 
+                  className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/70"
+                  onClick={() => handleSort('email')}
+                >
+                  Email {renderSortIcon('email')}
+                </th>
+                <th 
+                  className="px-4 py-3 text-left text-sm font-medium hidden md:table-cell cursor-pointer hover:bg-muted/70"
+                  onClick={() => handleSort('company')}
+                >
+                  Company {renderSortIcon('company')}
+                </th>
+                <th 
+                  className="px-4 py-3 text-left text-sm font-medium hidden md:table-cell cursor-pointer hover:bg-muted/70"
+                  onClick={() => handleSort('status')}
+                >
+                  Status {renderSortIcon('status')}
+                </th>
+                <th 
+                  className="px-4 py-3 text-left text-sm font-medium hidden lg:table-cell cursor-pointer hover:bg-muted/70"
+                  onClick={() => handleSort('updatedAt')}
+                >
+                  Last Updated {renderSortIcon('updatedAt')}
+                </th>
                 <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
               </tr>
             </thead>

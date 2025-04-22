@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClientStore } from '@/lib/stores';
-import { Building, ExternalLink, Pencil, Trash2, Eye, Search } from 'lucide-react';
+import { Building, ExternalLink, Pencil, Trash2, Eye, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Company } from '@/lib/db';
 
@@ -14,30 +14,91 @@ interface CompanyListProps {
   showSearch?: boolean;
 }
 
+// Define sort types
+type SortField = 'name' | 'industry' | 'clientCount' | 'updatedAt';
+type SortDirection = 'asc' | 'desc';
+
 export function CompanyList({ limit, showSearch = true }: CompanyListProps) {
   const { companies, fetchCompanies, removeCompany, isLoadingCompanies, error } = useClientStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
+  const [filteredCompanies, setFilteredCompanies] = useState<(Company & { clientCount?: number })[]>([]);
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   
   useEffect(() => {
     fetchCompanies();
   }, [fetchCompanies]);
   
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredCompanies(limit ? companies.slice(0, limit) : companies);
-    } else {
+    // Filter companies based on search term
+    let filtered = companies;
+    if (searchTerm.trim() !== '') {
       const lowercasedSearch = searchTerm.toLowerCase();
-      setFilteredCompanies(
-        companies.filter(
-          (company) =>
-            company.name.toLowerCase().includes(lowercasedSearch) ||
-            (company.industry && company.industry.toLowerCase().includes(lowercasedSearch)) ||
-            (company.website && company.website.toLowerCase().includes(lowercasedSearch))
-        )
+      filtered = companies.filter(
+        (company) =>
+          company.name.toLowerCase().includes(lowercasedSearch) ||
+          (company.industry && company.industry.toLowerCase().includes(lowercasedSearch)) ||
+          (company.website && company.website.toLowerCase().includes(lowercasedSearch))
       );
     }
-  }, [companies, searchTerm, limit]);
+    
+    // Sort the filtered companies
+    const sorted = [...filtered].sort((a, b) => {
+      // Handle different field types
+      switch (sortField) {
+        case 'name':
+          return sortDirection === 'asc' 
+            ? a.name.localeCompare(b.name) 
+            : b.name.localeCompare(a.name);
+        
+        case 'industry':
+          const industryA = a.industry || '';
+          const industryB = b.industry || '';
+          return sortDirection === 'asc' 
+            ? industryA.localeCompare(industryB) 
+            : industryB.localeCompare(industryA);
+        
+        case 'clientCount':
+          const countA = a.clientCount || 0;
+          const countB = b.clientCount || 0;
+          return sortDirection === 'asc' 
+            ? countA - countB 
+            : countB - countA;
+        
+        case 'updatedAt':
+          const dateA = new Date(a.updatedAt).getTime();
+          const dateB = new Date(b.updatedAt).getTime();
+          return sortDirection === 'asc' 
+            ? dateA - dateB 
+            : dateB - dateA;
+            
+        default:
+          return 0;
+      }
+    });
+    
+    // Apply limit if specified
+    setFilteredCompanies(limit ? sorted.slice(0, limit) : sorted);
+  }, [companies, searchTerm, limit, sortField, sortDirection]);
+  
+  const handleSort = (field: SortField) => {
+    // If clicking the same field, toggle direction
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // If clicking a new field, set it as the sort field and default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+  
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    
+    return sortDirection === 'asc' 
+      ? <ChevronUp className="ml-1 h-4 w-4 inline" /> 
+      : <ChevronDown className="ml-1 h-4 w-4 inline" />;
+  };
   
   const handleDelete = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this company? This action cannot be undone.')) {
@@ -85,11 +146,31 @@ export function CompanyList({ limit, showSearch = true }: CompanyListProps) {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Industry</th>
-                <th className="px-4 py-3 text-center text-sm font-medium">Clients</th>
+                <th 
+                  className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/70"
+                  onClick={() => handleSort('name')}
+                >
+                  Name {renderSortIcon('name')}
+                </th>
+                <th 
+                  className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/70"
+                  onClick={() => handleSort('industry')}
+                >
+                  Industry {renderSortIcon('industry')}
+                </th>
+                <th 
+                  className="px-4 py-3 text-center text-sm font-medium cursor-pointer hover:bg-muted/70"
+                  onClick={() => handleSort('clientCount')}
+                >
+                  Clients {renderSortIcon('clientCount')}
+                </th>
                 <th className="px-4 py-3 text-left text-sm font-medium hidden md:table-cell">Website</th>
-                <th className="px-4 py-3 text-left text-sm font-medium hidden lg:table-cell">Last Updated</th>
+                <th 
+                  className="px-4 py-3 text-left text-sm font-medium hidden lg:table-cell cursor-pointer hover:bg-muted/70"
+                  onClick={() => handleSort('updatedAt')}
+                >
+                  Last Updated {renderSortIcon('updatedAt')}
+                </th>
                 <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
               </tr>
             </thead>
