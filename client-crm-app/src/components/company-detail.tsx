@@ -7,7 +7,6 @@ import {
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
@@ -27,7 +26,7 @@ export function CompanyDetail({ companyId }: CompanyDetailProps) {
     selectedCompany, 
     fetchCompanyWithClients, 
     removeCompany, 
-    isLoading, 
+    isLoadingCompanies: isLoading, 
     clients 
   } = useClientStore();
   
@@ -149,7 +148,7 @@ export function CompanyDetail({ companyId }: CompanyDetailProps) {
         </div>
         
         {clients.length > 0 ? (
-          <ClientList />
+          <ClientList companyId={companyId} showSearch={false} />
         ) : (
           <div className="text-center p-8 border rounded-md">
             <Users className="mx-auto h-12 w-12 text-muted-foreground" />

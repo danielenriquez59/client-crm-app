@@ -12,13 +12,14 @@ import { Edit, Trash2, Eye, Search, ChevronUp, ChevronDown } from 'lucide-react'
 interface ClientListProps {
   limit?: number;
   showSearch?: boolean;
+  companyId?: number;
 }
 
 // Define sort types
 type SortField = 'name' | 'email' | 'company' | 'status' | 'updatedAt';
 type SortDirection = 'asc' | 'desc';
 
-export function ClientList({ limit, showSearch = true }: ClientListProps) {
+export function ClientList({ limit, showSearch = true, companyId }: ClientListProps) {
   const { clients, fetchClients, fetchRecentClients, removeClient, isLoading, error } = useClientStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredClients, setFilteredClients] = useState<(Client & { companyName?: string })[]>([]);
@@ -34,11 +35,14 @@ export function ClientList({ limit, showSearch = true }: ClientListProps) {
   }, [fetchClients, fetchRecentClients, limit]);
 
   useEffect(() => {
-    // Filter clients based on search term
+    // Filter clients based on search term and company ID
     let filtered = clients;
+    if (companyId) {
+      filtered = filtered.filter((client) => client.companyId === companyId);
+    }
     if (searchTerm.trim() !== '') {
       const lowercasedSearch = searchTerm.toLowerCase();
-      filtered = clients.filter(
+      filtered = filtered.filter(
         (client) =>
           client.name.toLowerCase().includes(lowercasedSearch) ||
           client.email.toLowerCase().includes(lowercasedSearch) ||
@@ -87,7 +91,7 @@ export function ClientList({ limit, showSearch = true }: ClientListProps) {
     
     // Apply limit if specified
     setFilteredClients(limit ? sorted.slice(0, limit) : sorted);
-  }, [clients, searchTerm, limit, sortField, sortDirection]);
+  }, [clients, searchTerm, limit, sortField, sortDirection, companyId]);
 
   const handleSort = (field: SortField) => {
     // If clicking the same field, toggle direction
