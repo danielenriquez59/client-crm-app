@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
-import { useClientStore } from "@/lib/store";
+import { useClientStore } from "@/lib/stores";
 import { formatDate } from "@/lib/utils";
 import { InteractionList } from "@/components/interaction-list";
 

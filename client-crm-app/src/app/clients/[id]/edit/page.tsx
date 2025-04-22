@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { ClientForm } from "@/components/client-form";
-import { useClientStore } from "@/lib/store";
+import { useClientStore } from "@/lib/stores";
 
 export default function EditClientPage() {
   const params = useParams();

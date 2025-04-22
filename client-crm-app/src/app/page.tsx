@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ClientList } from "@/components/client-list";
 import { RecentInteractions } from "@/components/recent-interactions";
 import { UserPlus, Users, Calendar, BarChart, MessageSquarePlus, Building, Plus } from "lucide-react";
-import { useClientStore } from "@/lib/store";
+import { useClientStore } from "@/lib/stores";
 import { InteractionModal } from "@/components/interaction-modal";
 import { CompanyList } from "@/components/company-list";
 
