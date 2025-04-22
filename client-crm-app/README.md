@@ -1,6 +1,7 @@
 # Client CRM
 
 A lightweight, offline-first client relationship management application built with Next.js and IndexedDB. This application allows you to manage clients and companies without requiring a backend server or internet connection.
+This is a very simple app intended to use your local-storage and for personal use only. 
 
 ## Features
 

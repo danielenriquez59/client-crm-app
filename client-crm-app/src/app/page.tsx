@@ -10,6 +10,7 @@ import { UserPlus, Users, Calendar, BarChart, MessageSquarePlus, Building, Plus 
 import { useClientStore } from "@/lib/stores";
 import { InteractionModal } from "@/components/interaction-modal";
 import { CompanyList } from "@/components/company-list";
+import { CompanyModal } from "@/components/company-modal";
 
 export default function Home() {
   const { 
@@ -23,6 +24,7 @@ export default function Home() {
     companies
   } = useClientStore();
   const [interactionModalOpen, setInteractionModalOpen] = useState(false);
+  const [companyModalOpen, setCompanyModalOpen] = useState(false);
 
   useEffect(() => {
     fetchRecentClients(10);
@@ -64,11 +66,9 @@ export default function Home() {
               Add Client
             </Link>
           </Button>
-          <Button variant="outline" asChild>
-            <Link href="/companies/new">
-              <Building className="mr-2 h-4 w-4" />
-              Add Company
-            </Link>
+          <Button variant="outline" onClick={() => setCompanyModalOpen(true)}>
+            <Building className="mr-2 h-4 w-4" />
+            Add Company
           </Button>
         </div>
       </div>
@@ -138,9 +138,15 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Modals */}
       <InteractionModal 
         isOpen={interactionModalOpen} 
         onClose={() => setInteractionModalOpen(false)} 
+      />
+      
+      <CompanyModal 
+        isOpen={companyModalOpen} 
+        onClose={() => setCompanyModalOpen(false)} 
       />
     </div>
   );
