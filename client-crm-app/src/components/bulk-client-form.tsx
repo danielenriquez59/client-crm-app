@@ -10,21 +10,22 @@ import { useClientStore } from '@/lib/store';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Trash2, Plus, Download, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { CompanyAutocomplete } from './company-autocomplete';
+import { CompanySelector } from './company-selector';
 
 interface ClientRowData {
   id: string;
   name: string;
   email: string;
   phone: string;
-  company: string;
+  companyName: string;
+  companyId?: number;
   location: string;
   status: 'active' | 'inactive' | 'evaluation';
 }
 
 export function BulkClientForm() {
   const router = useRouter();
-  const { createClientWithNormalizedCompany, fetchCompanies, companies } = useClientStore();
+  const { createClientWithCompany, fetchCompanies, companies } = useClientStore();
   
   const [clients, setClients] = useState<ClientRowData[]>([
     {
@@ -32,7 +33,8 @@ export function BulkClientForm() {
       name: '',
       email: '',
       phone: '',
-      company: '',
+      companyName: '',
+      companyId: undefined,
       location: '',
       status: 'active'
     }
@@ -57,7 +59,8 @@ export function BulkClientForm() {
         name: '',
         email: '',
         phone: '',
-        company: '',
+        companyName: '',
+        companyId: undefined,
         location: '',
         status: 'active'
       }
@@ -75,6 +78,28 @@ export function BulkClientForm() {
     setClients(clients.map(client => 
       client.id === id ? { ...client, [field]: value } : client
     ));
+  };
+  
+  const handleCompanyChange = (id: string, companyId: number | undefined) => {
+    setClients(clients.map(client => {
+      if (client.id === id) {
+        // Find company name if companyId is provided
+        let companyName = '';
+        if (companyId) {
+          const company = companies.find(c => c.id === companyId);
+          if (company) {
+            companyName = company.name;
+          }
+        }
+        
+        return { 
+          ...client, 
+          companyId, 
+          companyName 
+        };
+      }
+      return client;
+    }));
   };
   
   const validateClients = () => {
@@ -121,11 +146,12 @@ export function BulkClientForm() {
         const client = clients[i];
         try {
           setCurrentImportingClient(client.name);
-          await createClientWithNormalizedCompany({
+          await createClientWithCompany({
             name: client.name,
             email: client.email,
             phone: client.phone,
-            company: client.company,
+            companyId: client.companyId,
+            companyName: client.companyName,
             location: client.location,
             status: client.status
           });
@@ -222,7 +248,8 @@ export function BulkClientForm() {
             name: values[nameIndex] || '',
             email: values[emailIndex] || '',
             phone: values[phoneIndex] || '',
-            company: values[companyIndex] || '',
+            companyName: values[companyIndex] || '',
+            companyId: undefined, // Will be resolved when importing
             location: values[locationIndex] || '',
             status: validStatus
           });
@@ -336,10 +363,9 @@ export function BulkClientForm() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Input
-                        value={client.company}
-                        onChange={(e) => handleChange(client.id, 'company', e.target.value)}
-                        placeholder="Company name"
+                      <CompanySelector
+                        value={client.companyId}
+                        onChange={(companyId) => handleCompanyChange(client.id, companyId)}
                       />
                     </TableCell>
                     <TableCell>

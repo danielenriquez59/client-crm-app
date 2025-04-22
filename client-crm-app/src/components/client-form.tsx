@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Client } from '@/lib/db';
 import { useClientStore } from '@/lib/store';
-import { CompanyAutocomplete } from './company-autocomplete';
+import { CompanySelector } from './company-selector';
 
 interface ClientFormProps {
   client?: Client;
@@ -16,16 +16,32 @@ interface ClientFormProps {
 
 export function ClientForm({ client, isEditing = false }: ClientFormProps) {
   const router = useRouter();
-  const { createClientWithNormalizedCompany, updateClientData } = useClientStore();
+  const { createClientWithCompany, updateClientData, companies, fetchCompanies } = useClientStore();
   
   const [formData, setFormData] = useState({
     name: client?.name || '',
     email: client?.email || '',
     phone: client?.phone || '',
-    company: client?.company || '',
+    companyName: '',
+    companyId: client?.companyId,
     location: client?.location || '',
     status: client?.status || 'active' as 'active' | 'inactive' | 'evaluation',
   });
+  
+  // Fetch company name if client has companyId
+  useEffect(() => {
+    if (client?.companyId && companies.length > 0) {
+      const company = companies.find(c => c.id === client.companyId);
+      if (company) {
+        setFormData(prev => ({ ...prev, companyName: company.name }));
+      }
+    }
+  }, [client, companies]);
+  
+  // Fetch companies on mount
+  useEffect(() => {
+    fetchCompanies();
+  }, [fetchCompanies]);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,8 +51,12 @@ export function ClientForm({ client, isEditing = false }: ClientFormProps) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCompanyChange = (value: string) => {
-    setFormData(prev => ({ ...prev, company: value }));
+  const handleCompanyChange = (companyId: number | undefined) => {
+    setFormData(prev => ({ ...prev, companyId }));
+  };
+  
+  const handleCompanyNameChange = (companyName: string) => {
+    setFormData(prev => ({ ...prev, companyName }));
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,12 +74,26 @@ export function ClientForm({ client, isEditing = false }: ClientFormProps) {
       }
       
       if (isEditing && client?.id) {
-        await updateClientData(client.id, formData);
+        await updateClientData(client.id, {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          companyId: formData.companyId,
+          location: formData.location,
+          status: formData.status
+        });
         // Navigate back to the client detail page
         router.push(`/clients/${client.id}`);
       } else {
-        // Create a new client with normalized company and navigate to the clients list
-        const newClientId = await createClientWithNormalizedCompany(formData);
+        // Create a new client with company and navigate to the clients list
+        const newClientId = await createClientWithCompany({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          companyName: formData.companyName,
+          location: formData.location,
+          status: formData.status
+        });
         router.push('/clients');
       }
     } catch (err) {
@@ -123,13 +157,13 @@ export function ClientForm({ client, isEditing = false }: ClientFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="company" className="text-sm font-medium">
+              <label htmlFor="companyId" className="text-sm font-medium">
                 Company
               </label>
-              <CompanyAutocomplete
-                value={formData.company}
+              <CompanySelector
+                value={formData.companyId}
                 onChange={handleCompanyChange}
-                placeholder="Company name"
+                onCompanyNameChange={handleCompanyNameChange}
               />
             </div>
             <div className="space-y-2">

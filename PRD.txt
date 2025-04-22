@@ -1,14 +1,15 @@
 Client CRM Application - Product Requirements Document
 1. Overview
 1.1 Purpose
-To develop a lightweight, performant Client Relationship Management (CRM) application for tracking client interactions and managing client data locally without authentication requirements.
+To develop a lightweight, performant Client Relationship Management (CRM) application for tracking client interactions and managing client data locally without authentication requirements. This is for personal use so keep all the code simple and easy to understand. no need for complex data handling logic
 
 1.2 Goals
 Create a responsive single-page application that minimizes page reloads
 Build a simple, intuitive user interface using shadcn and Tailwind CSS
 Implement local database storage for client information
 Enable efficient tracking of client details and interactions
-Provide a streamlined workflow for managing client relationships
+Provide a streamlined workflow for managing client 
+
 2. Features and Requirements
 2.1 Client Management
 Add, edit, and delete client records

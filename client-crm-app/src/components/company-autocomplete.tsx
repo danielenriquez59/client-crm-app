@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Company } from '@/lib/db';
 
 interface CompanyAutocompleteProps {
   value: string;
@@ -59,7 +60,7 @@ export function CompanyAutocomplete({
 
   // Filter companies based on input
   const filteredCompanies = companies.filter(company => 
-    company.toLowerCase().includes(inputValue.toLowerCase())
+    company.name.toLowerCase().includes(inputValue.toLowerCase())
   );
 
   // Handle direct input changes (typing)
@@ -75,9 +76,9 @@ export function CompanyAutocomplete({
   };
 
   // Handle selection from dropdown
-  const handleSelect = (company: string) => {
-    setInputValue(company);
-    onChange(company);
+  const handleSelect = (company: Company) => {
+    setInputValue(company.name);
+    onChange(company.name);
     setOpen(false);
     inputRef.current?.focus();
   };
@@ -177,7 +178,7 @@ export function CompanyAutocomplete({
             ) : (
               filteredCompanies.map((company, index) => (
                 <div
-                  key={company}
+                  key={company.id}
                   ref={(el) => setItemRef(el, index)}
                   className={cn(
                     "flex items-center rounded-sm px-2 py-1.5 text-sm cursor-pointer",
@@ -189,10 +190,10 @@ export function CompanyAutocomplete({
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      inputValue === company ? "opacity-100" : "opacity-0"
+                      inputValue === company.name ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {company}
+                  {company.name}
                 </div>
               ))
             )}

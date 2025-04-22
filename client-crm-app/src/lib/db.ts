@@ -6,7 +6,8 @@ export interface Client {
   name: string;
   email: string;
   phone?: string;
-  company?: string;
+  companyId?: number;
+  company?: string; // Keep for backward compatibility
   location?: string;
   status: 'active' | 'inactive' | 'evaluation';
   createdAt: Date;
@@ -30,11 +31,22 @@ export interface Note {
   updatedAt: Date;
 }
 
+export interface Company {
+  id?: number;
+  name: string;
+  industry?: string;
+  website?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Define our database
 class ClientCRMDatabase extends Dexie {
   clients!: Table<Client>;
   interactions!: Table<Interaction>;
   notes!: Table<Note>;
+  companies!: Table<Company>;
 
   constructor() {
     super('ClientCRMDatabase');
@@ -57,6 +69,44 @@ class ClientCRMDatabase extends Dexie {
           interaction.clientIds = [interaction.clientId];
           // Remove the old clientId property
           delete interaction.clientId;
+        }
+      });
+    });
+    
+    // Add version 3 with companies table and schema migration
+    this.version(3).stores({
+      clients: '++id, name, email, companyId, status, updatedAt',
+      companies: '++id, name, industry, website'
+    }).upgrade(async tx => {
+      // Step 1: Extract unique companies from clients
+      const clients = await tx.table('clients').toArray();
+      const uniqueCompanyNames = [...new Set(
+        clients
+          .map(client => client.company)
+          .filter((company): company is string => 
+            company !== undefined && company !== null && company.trim() !== ''
+          )
+      )].sort();
+      
+      // Step 2: Create company records
+      const companyMap = new Map<string, number>();
+      
+      for (const companyName of uniqueCompanyNames) {
+        const now = new Date();
+        const companyId = await tx.table('companies').add({
+          name: companyName,
+          createdAt: now,
+          updatedAt: now
+        });
+        companyMap.set(companyName, typeof companyId === 'number' ? companyId : Number(companyId));
+      }
+      
+      // Step 3: Update client records with companyId
+      await tx.table('clients').toCollection().modify(client => {
+        if (client.company) {
+          client.companyId = companyMap.get(client.company);
+          // Keep the company field for backward compatibility during migration
+          // It will be removed in version 4
         }
       });
     });
@@ -109,21 +159,21 @@ export async function getClientById(id: number): Promise<Client | undefined> {
 }
 
 export async function getUniqueCompanies(): Promise<string[]> {
-  const clients = await db.clients.toArray();
-  const companies = clients
-    .map(client => client.company)
-    .filter((company): company is string => 
-      company !== undefined && company !== null && company.trim() !== ''
-    );
+  const companies = await db.companies.toArray();
+  const companyNames = companies.map(company => company.name);
   
   // Return unique companies sorted alphabetically
-  return [...new Set(companies)].sort();
+  return [...new Set(companyNames)].sort();
 }
 
 export async function addClient(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>): Promise<number> {
   const now = new Date();
+  
+  // Ensure we're using the new schema with companyId
+  const { company, ...clientData } = client as any;
+  
   const id = await db.clients.add({
-    ...client,
+    ...clientData,
     createdAt: now,
     updatedAt: now
   });
@@ -131,8 +181,11 @@ export async function addClient(client: Omit<Client, 'id' | 'createdAt' | 'updat
 }
 
 export async function updateClient(id: number, client: Partial<Omit<Client, 'id' | 'createdAt'>>): Promise<number> {
+  // Ensure we're using the new schema with companyId
+  const { company, ...clientData } = client as any;
+  
   return await db.clients.update(id, {
-    ...client,
+    ...clientData,
     updatedAt: new Date()
   });
 }
@@ -227,4 +280,62 @@ export async function updateNote(id: number, content: string): Promise<number> {
 
 export async function deleteNote(id: number): Promise<void> {
   await db.notes.delete(id);
+}
+
+export async function addCompany(company: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<number> {
+  const now = new Date();
+  const id = await db.companies.add({
+    ...company,
+    createdAt: now,
+    updatedAt: now
+  });
+  return typeof id === 'number' ? id : Number(id);
+}
+
+export async function getCompanyById(id: number): Promise<Company | undefined> {
+  const company = await db.companies.get(id);
+  return company ? convertDates(company) : undefined;
+}
+
+export async function updateCompany(id: number, company: Partial<Omit<Company, 'id' | 'createdAt'>>): Promise<number> {
+  return await db.companies.update(id, {
+    ...company,
+    updatedAt: new Date()
+  });
+}
+
+export async function deleteCompany(id: number): Promise<void> {
+  await db.companies.delete(id);
+}
+
+export async function getAllCompanies(): Promise<Company[]> {
+  const companies = await db.companies
+    .orderBy('name')
+    .toArray();
+  
+  return companies.map(company => convertDates(company));
+}
+
+export async function getClientsByCompany(companyId: number): Promise<Client[]> {
+  const clients = await db.clients
+    .where('companyId')
+    .equals(companyId)
+    .toArray();
+  
+  return clients.map(client => convertDates(client));
+}
+
+export async function getCompanyWithClients(companyId: number): Promise<{ company: Company, clients: Client[] } | undefined> {
+  const company = await getCompanyById(companyId);
+  
+  if (!company) {
+    return undefined;
+  }
+  
+  const clients = await getClientsByCompany(companyId);
+  
+  return {
+    company,
+    clients
+  };
 }

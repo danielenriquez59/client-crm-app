@@ -35,6 +35,9 @@ export default function RootLayout({
                   <Link href="/interactions" className="px-3 py-2 rounded-md hover:bg-accent hover:text-accent-foreground">
                     Interactions
                   </Link>
+                  <Link href="/companies" className="px-3 py-2 rounded-md hover:bg-accent hover:text-accent-foreground">
+                    Companies
+                  </Link>
                 </nav>
               </div>
             </div>
