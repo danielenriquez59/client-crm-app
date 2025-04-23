@@ -72,7 +72,7 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
     try {
       await createInteraction({
         clientIds: selectedClientIds,
-        type: formData.type as 'email' | 'call' | 'meeting' | 'other',
+        type: formData.type as 'email' | 'call' | 'meeting' | 'other' | 'task',
         date: new Date(formData.date),
         notes: formData.notes,
       });
@@ -130,6 +130,7 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
                 <SelectItem value="email">Email</SelectItem>
                 <SelectItem value="meeting">Meeting</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
+                <SelectItem value="task">Task</SelectItem>
               </SelectContent>
             </Select>
           </div>

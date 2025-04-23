@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { 
   Table, 
   TableBody, 
@@ -15,65 +14,144 @@ import { useClientStore } from '@/lib/stores';
 import { Skeleton } from './ui/skeleton';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Eye, Edit, Trash2 } from 'lucide-react';
+import { Interaction } from '@/lib/db';
+import { Trash2, MessageSquare, ChevronUp, ChevronDown, User, Building } from 'lucide-react';
 
 interface RecentInteractionsProps {
   limit?: number;
 }
 
-export function RecentInteractions({ limit = 10 }: RecentInteractionsProps) {
+// Define sort types
+type SortField = 'date' | 'type' | 'notes' | 'client' | 'company';
+type SortDirection = 'asc' | 'desc';
+
+export function RecentInteractions({ limit }: RecentInteractionsProps) {
   const { 
     interactions, 
     fetchAllInteractions, 
-    isLoadingInteractions, 
+    isLoading, 
+    removeInteraction, 
     clients, 
-    fetchClients 
+    fetchClients,
+    companies,
+    fetchCompanies 
   } = useClientStore();
   
+  const [recentInteractions, setRecentInteractions] = useState<(Interaction & { 
+    clientNames: string,
+    companyNames: string 
+  })[]>([]);
+  
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
   useEffect(() => {
     fetchAllInteractions();
     fetchClients();
-  }, [fetchAllInteractions, fetchClients]);
+    fetchCompanies();
+  }, [fetchAllInteractions, fetchClients, fetchCompanies]);
 
-  // Sort interactions by date (newest first) and limit to the specified number
-  const recentInteractions = [...interactions]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, limit);
+  useEffect(() => {
+    // Add client names and company names to interactions
+    const interactionsWithDetails = interactions.map(interaction => {
+      // Get client information
+      const interactionClients = interaction.clientIds
+        .map(clientId => clients.find(client => client.id === clientId))
+        .filter(client => client !== undefined);
+      
+      // Get client names
+      const clientNames = interactionClients
+        .map(client => client?.name || 'Unknown')
+        .join(', ');
+      
+      // Get unique company IDs from the clients
+      const companyIds = [...new Set(
+        interactionClients
+          .map(client => client?.companyId)
+          .filter(id => id !== undefined)
+      )] as number[];
+      
+      // Get company names
+      const companyNames = companyIds
+        .map(companyId => companies.find(company => company.id === companyId)?.name || 'Unknown')
+        .join(', ');
+      
+      return {
+        ...interaction,
+        clientNames,
+        companyNames
+      };
+    });
 
-  // Get client name by ID
-  const getClientName = (clientId: number) => {
-    const client = clients.find(c => c.id === clientId);
-    return client ? client.name : 'Unknown Client';
-  };
+    // Sort interactions
+    const sorted = [...interactionsWithDetails].sort((a, b) => {
+      // Handle different field types
+      switch (sortField) {
+        case 'date':
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          return sortDirection === 'asc' 
+            ? dateA - dateB 
+            : dateB - dateA;
+        
+        case 'type':
+          return sortDirection === 'asc' 
+            ? a.type.localeCompare(b.type) 
+            : b.type.localeCompare(a.type);
+        
+        case 'notes':
+          return sortDirection === 'asc' 
+            ? a.notes.localeCompare(b.notes) 
+            : b.notes.localeCompare(a.notes);
+            
+        case 'client':
+          return sortDirection === 'asc' 
+            ? a.clientNames.localeCompare(b.clientNames) 
+            : b.clientNames.localeCompare(a.clientNames);
+            
+        case 'company':
+          return sortDirection === 'asc' 
+            ? a.companyNames.localeCompare(b.companyNames) 
+            : b.companyNames.localeCompare(a.companyNames);
+            
+        default:
+          return 0;
+      }
+    });
+    
+    // Apply limit if specified
+    setRecentInteractions(limit ? sorted.slice(0, limit) : sorted);
+  }, [interactions, clients, companies, limit, sortField, sortDirection]);
 
-  // Get interaction type with proper capitalization
-  const formatInteractionType = (type: string) => {
-    return type.charAt(0).toUpperCase() + type.slice(1);
-  };
-
-  // Handle delete interaction (placeholder for now)
-  const handleDelete = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this interaction? This action cannot be undone.')) {
-      // TODO: Implement delete interaction functionality
-      console.log('Delete interaction', id);
-      // After implementing, refresh the interactions list
-      fetchAllInteractions();
+  const handleSort = (field: SortField) => {
+    // If clicking the same field, toggle direction
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // If clicking a new field, set it as the sort field and default to ascending
+      setSortField(field);
+      setSortDirection('asc');
     }
   };
 
-  if (isLoadingInteractions) {
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ? <ChevronUp className="inline h-4 w-4" /> : <ChevronDown className="inline h-4 w-4" />;
+  };
+
+  if (isLoading) {
     return (
       <div className="space-y-2">
-        {Array(3).fill(0).map((_, i) => (
-          <Skeleton key={i} className="h-12 w-full" />
-        ))}
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
       </div>
     );
   }
 
   if (recentInteractions.length === 0) {
     return (
-      <div className="rounded-md border">
+      <div className="rounded-md border bg-white shadow-md">
         <div className="p-4 text-center text-muted-foreground">
           No interactions recorded yet.
         </div>
@@ -83,73 +161,93 @@ export function RecentInteractions({ limit = 10 }: RecentInteractionsProps) {
 
   return (
     <div className="rounded-md border bg-white shadow-md">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Clients</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Notes</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {recentInteractions.map((interaction) => (
-            <TableRow key={interaction.id}>
-              <TableCell className="font-medium">
-                {formatDate(interaction.date)}
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-wrap gap-1">
-                  {interaction.clientIds && interaction.clientIds.length > 0 ? (
-                    interaction.clientIds.map((clientId) => (
-                      <Link 
-                        href={`/clients/${clientId}`}
-                        key={clientId}
-                        className="inline-block"
-                      >
-                        <Badge variant="secondary" className="hover:bg-secondary">
-                          {getClientName(clientId)}
-                        </Badge>
-                      </Link>
-                    ))
+      <p className="m-2">{recentInteractions.length} interactions</p>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th 
+                className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/70"
+                onClick={() => handleSort('date')}
+              >
+                Date {renderSortIcon('date')}
+              </th>
+              <th 
+                className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/70"
+                onClick={() => handleSort('client')}
+              >
+                Client {renderSortIcon('client')}
+              </th>
+              <th 
+                className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/70"
+                onClick={() => handleSort('company')}
+              >
+                Company {renderSortIcon('company')}
+              </th>
+              <th 
+                className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/70"
+                onClick={() => handleSort('type')}
+              >
+                Type {renderSortIcon('type')}
+              </th>
+              <th 
+                className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/70 hidden md:table-cell"
+                onClick={() => handleSort('notes')}
+              >
+                Notes {renderSortIcon('notes')}
+              </th>
+              <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentInteractions.map((interaction) => (
+              <tr key={interaction.id} className="border-b hover:bg-muted/50">
+                <td className="px-4 py-3 text-sm font-medium">
+                  {formatDate(interaction.date)}
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <Badge variant="outline" className="font-normal">
+                    <User className="mr-1 h-3 w-3" />
+                    {interaction.clientNames}
+                  </Badge>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  {interaction.companyNames ? (
+                    <Badge variant="outline" className="font-normal bg-muted/30">
+                      <Building className="mr-1 h-3 w-3" />
+                      {interaction.companyNames}
+                    </Badge>
                   ) : (
-                    <span className="text-muted-foreground">No clients</span>
+                    <span className="text-muted-foreground italic text-xs">No company</span>
                   )}
-                </div>
-              </TableCell>
-              <TableCell>{formatInteractionType(interaction.type)}</TableCell>
-              <TableCell className="max-w-xs truncate">
-                {interaction.notes}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end space-x-2">
-                  <Button variant="ghost" size="icon" asChild>
-                    <Link href={`/interactions/${interaction.id}`}>
-                      <Eye className="h-4 w-4" />
-                      <span className="sr-only">View</span>
-                    </Link>
-                  </Button>
-                  <Button variant="ghost" size="icon" asChild>
-                    <Link href={`/interactions/${interaction.id}/edit`}>
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
-                    </Link>
-                  </Button>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <Badge variant="secondary">
+                    <MessageSquare className="mr-1 h-3 w-3" />
+                    {interaction.type}
+                  </Badge>
+                </td>
+                <td className="px-4 py-3 text-sm hidden md:table-cell">
+                  <div className="max-w-lg ">
+                    {interaction.notes || <span className="text-muted-foreground italic">No notes</span>}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm text-right">
                   <Button 
                     variant="ghost" 
-                    size="icon"
-                    onClick={() => interaction.id && handleDelete(interaction.id)}
+                    size="sm" 
+                    onClick={() => removeInteraction(interaction.id!)}
+                    className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
                   >
                     <Trash2 className="h-4 w-4" />
                     <span className="sr-only">Delete</span>
                   </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

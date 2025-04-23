@@ -17,7 +17,7 @@ export interface Client {
 export interface Interaction {
   id?: number;
   clientIds: number[]; 
-  type: 'email' | 'call' | 'meeting' | 'other';
+  type: 'email' | 'call' | 'meeting' | 'other' | 'task';
   date: Date;
   notes: string;
   createdAt: Date;

@@ -17,7 +17,7 @@ export function InteractionForm({ clientId, onSuccess, onCancel }: InteractionFo
   const { createInteraction, isLoadingInteractions, interactionError } = useClientStore();
   
   const [formData, setFormData] = useState({
-    type: 'email' as 'email' | 'call' | 'meeting' | 'other',
+    type: 'email' as 'email' | 'call' | 'meeting' |'task'| 'other',
     notes: '',
     date: new Date().toISOString().split('T')[0], // Default to today's date
   });
@@ -94,6 +94,7 @@ export function InteractionForm({ clientId, onSuccess, onCancel }: InteractionFo
                 <option value="email">Email</option>
                 <option value="call">Call</option>
                 <option value="meeting">Meeting</option>
+                <option value="task">Task</option>
                 <option value="other">Other</option>
               </select>
             </div>
