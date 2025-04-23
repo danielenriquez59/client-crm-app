@@ -8,6 +8,7 @@ export interface Client {
   phone?: string;
   companyId?: number;
   company?: string; // Keep for backward compatibility
+  companyName?: string; // Added for company name lookup
   location?: string;
   status: 'active' | 'inactive' | 'evaluation';
   createdAt: Date;
@@ -316,6 +317,14 @@ export async function addInteraction(interaction: Omit<Interaction, 'id' | 'crea
     createdAt: new Date()
   });
   return typeof id === 'number' ? id : Number(id);
+}
+
+export async function updateInteraction(id: number, interaction: Partial<Omit<Interaction, 'id' | 'createdAt'>>): Promise<number> {
+  return await db.interactions.update(id, interaction);
+}
+
+export async function removeInteraction(id: number): Promise<void> {
+  await db.interactions.delete(id);
 }
 
 export async function getClientNotes(clientId: number): Promise<Note[]> {

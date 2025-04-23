@@ -3,6 +3,8 @@ import {
   Interaction,
   getClientInteractions,
   getAllInteractions,
+  updateInteraction,
+  removeInteraction,
   addInteraction,
 } from '../db';
 
@@ -17,6 +19,8 @@ export interface InteractionActions {
   fetchClientInteractions: (clientId: number) => Promise<void>;
   fetchAllInteractions: () => Promise<void>;
   createInteraction: (interaction: Omit<Interaction, 'id' | 'createdAt'>) => Promise<number>;
+  updateInteraction: (id: number, interaction: Partial<Omit<Interaction, 'id' | 'createdAt'>>) => Promise<void>;
+  removeInteraction: (id: number) => Promise<void>;
 }
 
 export type InteractionSlice = InteractionState & InteractionActions;
@@ -62,6 +66,30 @@ export const createInteractionSlice: StateCreator<
       await get().fetchAllInteractions(); 
       set({ isLoadingInteractions: false });
       return id;
+    } catch (error) {
+      set({ interactionError: (error as Error).message, isLoadingInteractions: false });
+      throw error;
+    }
+  },
+  updateInteraction: async (id, interaction) => {
+    set({ isLoadingInteractions: true, interactionError: null });
+    try {
+      await updateInteraction(id, interaction);
+      // Refresh interactions after updating
+      await get().fetchAllInteractions(); 
+      set({ isLoadingInteractions: false });
+    } catch (error) {
+      set({ interactionError: (error as Error).message, isLoadingInteractions: false });
+      throw error;
+    }
+  },
+  removeInteraction: async (id) => {
+    set({ isLoadingInteractions: true, interactionError: null });
+    try {
+      await removeInteraction(id);
+      // Refresh interactions after deleting
+      await get().fetchAllInteractions(); 
+      set({ isLoadingInteractions: false });
     } catch (error) {
       set({ interactionError: (error as Error).message, isLoadingInteractions: false });
       throw error;

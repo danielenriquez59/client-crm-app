@@ -22,15 +22,17 @@ import {
 } from './ui/select';
 import { ClientMultiSelect } from './client-multi-select';
 import { useClientStore } from '@/lib/stores';
-import { Client } from '@/lib/db';
+import { Interaction } from '@/lib/db';
 
 interface InteractionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  interaction?: Interaction; // Optional interaction for editing
+  mode?: 'create' | 'edit';
 }
 
-export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
-  const { clients, fetchClients, createInteraction } = useClientStore();
+export function InteractionModal({ isOpen, onClose, interaction, mode = 'create' }: InteractionModalProps) {
+  const { clients, fetchClients, createInteraction, updateInteraction } = useClientStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
@@ -40,6 +42,26 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
+
+  // Initialize form with interaction data when editing
+  useEffect(() => {
+    if (mode === 'edit' && interaction) {
+      setFormData({
+        type: interaction.type,
+        date: new Date(interaction.date).toISOString().split('T')[0],
+        notes: interaction.notes,
+      });
+      setSelectedClientIds(interaction.clientIds);
+    } else {
+      // Reset form for create mode
+      setFormData({
+        type: 'call',
+        date: new Date().toISOString().split('T')[0],
+        notes: '',
+      });
+      setSelectedClientIds([]);
+    }
+  }, [mode, interaction, isOpen]);
 
   useEffect(() => {
     fetchClients();
@@ -70,12 +92,20 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
     setError(null);
     
     try {
-      await createInteraction({
+      const interactionData = {
         clientIds: selectedClientIds,
         type: formData.type as 'email' | 'call' | 'meeting' | 'other' | 'task',
         date: new Date(formData.date),
         notes: formData.notes,
-      });
+      };
+
+      if (mode === 'edit' && interaction?.id) {
+        // Update existing interaction
+        await updateInteraction(interaction.id, interactionData);
+      } else {
+        // Create new interaction
+        await createInteraction(interactionData);
+      }
       
       // Reset form and close modal
       setFormData({
@@ -86,7 +116,7 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
       setSelectedClientIds([]);
       onClose();
     } catch (err) {
-      setError((err as Error).message || 'Failed to create interaction');
+      setError((err as Error).message || 'Failed to save interaction');
     } finally {
       setIsSubmitting(false);
     }
@@ -96,9 +126,11 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
     <Dialog open={isOpen} onOpenChange={(openState: boolean) => !isSubmitting && !openState && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Interaction</DialogTitle>
+          <DialogTitle>{mode === 'edit' ? 'Edit Interaction' : 'Add New Interaction'}</DialogTitle>
           <DialogDescription>
-            Record a new interaction with one or more clients.
+            {mode === 'edit' 
+              ? 'Update the details of this interaction.' 
+              : 'Record a new interaction with one or more clients.'}
           </DialogDescription>
         </DialogHeader>
         
@@ -174,7 +206,7 @@ export function InteractionModal({ isOpen, onClose }: InteractionModalProps) {
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Interaction'}
+              {isSubmitting ? 'Saving...' : (mode === 'edit' ? 'Update' : 'Save Interaction')}
             </Button>
           </DialogFooter>
         </form>

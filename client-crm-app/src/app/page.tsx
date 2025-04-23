@@ -12,6 +12,7 @@ import { InteractionModal } from "@/components/interaction-modal";
 import { CompanyList } from "@/components/company-list";
 import { CompanyModal } from "@/components/company-modal";
 import { ClientModal } from "@/components/client-modal";
+import { Interaction } from "@/lib/db";
 
 export default function Home() {
   const { 
@@ -27,6 +28,8 @@ export default function Home() {
   const [interactionModalOpen, setInteractionModalOpen] = useState(false);
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
   const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [currentInteraction, setCurrentInteraction] = useState<Interaction | undefined>(undefined);
+  const [interactionMode, setInteractionMode] = useState<'create' | 'edit'>('create');
 
   useEffect(() => {
     fetchRecentClients();
@@ -112,7 +115,14 @@ export default function Home() {
             <Link href="/interactions">View All</Link>
           </Button>
         </div>
-        <RecentInteractions limit={5} />
+        <RecentInteractions 
+          limit={5} 
+          onEdit={(interaction: Interaction) => {
+            setCurrentInteraction(interaction);
+            setInteractionMode('edit');
+            setInteractionModalOpen(true);
+          }}
+        />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -140,7 +150,13 @@ export default function Home() {
       {/* Modals */}
       <InteractionModal 
         isOpen={interactionModalOpen} 
-        onClose={() => setInteractionModalOpen(false)} 
+        onClose={() => {
+          setInteractionModalOpen(false);
+          setCurrentInteraction(undefined);
+          setInteractionMode('create');
+        }} 
+        interaction={currentInteraction}
+        mode={interactionMode}
       />
       
       <CompanyModal 
