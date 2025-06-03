@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
+import { LogoutButton } from "@/components/logout-button";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -41,6 +42,7 @@ export default function RootLayout({
                   <Link href="/settings" className="px-3 py-2 rounded-md hover:bg-accent hover:text-accent-foreground">
                     Settings
                   </Link>
+                  <LogoutButton />
                 </nav>
               </div>
             </div>
