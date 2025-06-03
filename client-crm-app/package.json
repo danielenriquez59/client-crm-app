@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "clean": "rimraf .next",
+    "clean:build": "yarn clean && yarn build",
     "start": "next start",
     "lint": "next lint"
   },
