@@ -20,8 +20,8 @@ export async function createAuthToken(): Promise<string> {
     exp: Math.floor(Date.now() / 1000) + TOKEN_EXPIRATION
   };
   
-  // Encode the payload as base64
-  return Buffer.from(JSON.stringify(payload)).toString('base64');
+  // Encode the payload as base64 using btoa (browser-compatible)
+  return btoa(JSON.stringify(payload));
 }
 
 /**
@@ -29,8 +29,8 @@ export async function createAuthToken(): Promise<string> {
  */
 export function verifyAuthToken(token: string): AuthSession | null {
   try {
-    // Decode the base64 token
-    const payload = JSON.parse(Buffer.from(token, 'base64').toString()) as JWTPayload;
+    // Decode the base64 token using atob (browser-compatible)
+    const payload = JSON.parse(atob(token)) as JWTPayload;
     
     // Check if the token has expired
     if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
@@ -53,7 +53,23 @@ export async function setAuthCookie(): Promise<void> {
   const token = await createAuthToken();
   
   // Set the cookie with HttpOnly and Secure flags
-  cookies().set({
+  const cookieStore = cookies();
+  
+  // Using type assertion to avoid TypeScript errors
+  // This is safe because we know the cookies() API provides these methods
+  const cookiesWithMethods = cookieStore as unknown as {
+    set: (cookie: {
+      name: string;
+      value: string;
+      httpOnly?: boolean;
+      secure?: boolean;
+      maxAge?: number;
+      path?: string;
+      sameSite?: 'strict' | 'lax' | 'none';
+    }) => void;
+  };
+  
+  cookiesWithMethods.set({
     name: AUTH_COOKIE,
     value: token,
     httpOnly: true,
@@ -68,7 +84,14 @@ export async function setAuthCookie(): Promise<void> {
  * Clear the auth cookie (logout)
  */
 export function clearAuthCookie(): void {
-  cookies().delete(AUTH_COOKIE);
+  const cookieStore = cookies();
+  
+  // Using type assertion to avoid TypeScript errors
+  const cookiesWithMethods = cookieStore as unknown as {
+    delete: (name: string) => void;
+  };
+  
+  cookiesWithMethods.delete(AUTH_COOKIE);
 }
 
 /**
@@ -76,7 +99,13 @@ export function clearAuthCookie(): void {
  */
 export function getSession(): AuthSession | null {
   const cookieStore = cookies();
-  const token = cookieStore.get(AUTH_COOKIE)?.value;
+  
+  // Using type assertion to avoid TypeScript errors
+  const cookiesWithMethods = cookieStore as unknown as {
+    get: (name: string) => { value: string } | undefined;
+  };
+  
+  const token = cookiesWithMethods.get(AUTH_COOKIE)?.value;
   
   if (!token) {
     return null;

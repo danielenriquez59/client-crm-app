@@ -7,8 +7,10 @@ const AUTH_COOKIE = 'client-crm-auth';
 // Function to verify the token
 function verifyToken(token: string): boolean {
   try {
-    // Decode the base64 token
-    const payload = JSON.parse(Buffer.from(token, 'base64').toString());
+    // Safely decode the base64 token without using Buffer
+    // This is more compatible with edge runtime environments
+    const base64Decoded = atob(token);
+    const payload = JSON.parse(base64Decoded);
     
     // Check if the token has expired
     if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
