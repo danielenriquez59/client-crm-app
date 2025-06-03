@@ -42,6 +42,15 @@ export interface Company {
   updatedAt: Date;
 }
 
+// Define database export/import interfaces
+interface ExportData {
+  clients: Client[];
+  interactions: Interaction[];
+  notes: Note[];
+  companies: Company[];
+  version: number;
+}
+
 // Define our database
 class ClientCRMDatabase extends Dexie {
   clients!: Table<Client>;
@@ -116,6 +125,57 @@ class ClientCRMDatabase extends Dexie {
 
 // Create and export a database instance
 export const db = new ClientCRMDatabase();
+
+// Add export and import methods to the database
+export async function exportDatabase(): Promise<string> {
+  // Export all tables
+  const exportData: ExportData = {
+    clients: await db.clients.toArray(),
+    interactions: await db.interactions.toArray(),
+    notes: await db.notes.toArray(),
+    companies: await db.companies.toArray(),
+    version: db.verno // Store the current schema version
+  };
+  
+  return JSON.stringify(exportData, null, 2);
+}
+
+export async function importDatabase(data: string | ExportData): Promise<boolean> {
+  const importData: ExportData = typeof data === 'string' ? JSON.parse(data) : data;
+  
+  // Use a transaction to ensure all operations succeed or fail together
+  await db.transaction('rw', [db.clients, db.interactions, db.notes, db.companies], async () => {
+    // Clear existing data
+    await db.clients.clear();
+    await db.interactions.clear();
+    await db.notes.clear();
+    await db.companies.clear();
+    
+    // Import companies first (to maintain foreign key relationships)
+    if (importData.companies && Array.isArray(importData.companies)) {
+      await db.companies.bulkAdd(importData.companies);
+    }
+    
+    // Import clients
+    if (importData.clients && Array.isArray(importData.clients)) {
+      await db.clients.bulkAdd(importData.clients);
+    }
+    
+    // Import interactions
+    if (importData.interactions && Array.isArray(importData.interactions)) {
+      await db.interactions.bulkAdd(importData.interactions);
+    }
+    
+    // Import notes
+    if (importData.notes && Array.isArray(importData.notes)) {
+      await db.notes.bulkAdd(importData.notes);
+    }
+  });
+  
+  return true;
+}
+
+
 
 // Helper function to convert date strings to Date objects in retrieved records
 function convertDates<T extends { createdAt?: string | Date; updatedAt?: string | Date; date?: string | Date }>(
