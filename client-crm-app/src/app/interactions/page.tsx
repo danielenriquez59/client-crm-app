@@ -1,6 +1,6 @@
 "use client";
 
-import { AllInteractionsList } from "@/components/all-interactions-list";
+import { RecentInteractions } from "@/components/recent-interactions";
 
 export default function InteractionsPage() {
   return (
@@ -9,7 +9,7 @@ export default function InteractionsPage() {
         <h2 className="text-3xl font-bold tracking-tight">All Interactions</h2>
       </div>
 
-      <AllInteractionsList showSearch={true} />
+      <RecentInteractions />
     </div>
   );
 }
